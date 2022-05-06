@@ -1,29 +1,25 @@
 import tkinter as tk
 from constants import *
-
-root = tk.Tk()
-root.title('Catan')
-root.geometry('900x600')
-
-board_canvas = tk.Canvas(root, height=600, width=600, bg=HEX_COLORS['black'])
-controls_frame = tk.Frame(root, height=600, width=300, bg=HEX_COLORS['white'])
-
-# layout all of the main containers
-root.grid_columnconfigure(0, weight=2)
-root.grid_columnconfigure(1, weight=1)
-
-board_canvas.grid(row=0, column=0, sticky='w')
-controls_frame.grid(row=0, column=1, sticky='e')
-
-roll_button = tk.Button(controls_frame, text='Roll Dice')
-#actions = LabelFrame(controls_frame, text='Actions', bg='white')
-
-roll_button.pack()
-#actions.pack()
+from pytan.core.board import Board
+from pytan.core.game import Game
+from frames import BoardFrame, GameControlsFrame
 
 
-while 1:
-    try:
-        root.update()
-    except (KeyboardInterrupt, TclError):
-        exit()
+class CatanGUI(tk.Frame):
+    def __init__(self, options=None, *args, **kwargs):
+        super(CatanGUI, self).__init__()
+
+        self.game = Game()
+
+        self._board_frame = BoardFrame(self, self.game)
+        self._controls_frame = GameControlsFrame(self, self.game)
+
+        self._board_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        self._controls_frame.grid(row=1, column=0, sticky=tk.W)
+
+        self._board_frame.redraw()
+
+if __name__ == '__main__':
+        
+    app = CatanGUI()
+    app.mainloop()

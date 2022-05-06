@@ -7,7 +7,7 @@ import os
 from cards import *
 
 class Game(object):
-    def __init__(self, players = []):
+    def __init__(self, players = [], board = board.Board()):
         # Init
         if players:
             self._players = players
@@ -19,7 +19,7 @@ class Game(object):
                 pl.Player('Player 4', 3, 'orange')
             ]
     
-        self._board = board.Board()
+        self._board = board
 
         self.reset()
         
