@@ -1,4 +1,4 @@
-from cards import RESOURCE_CARDS, DEV_CARDS
+from pytan.core.cards import RESOURCE_CARDS, DEV_CARDS
 
 class Player(object):
     def __init__(self, name, identifier, color):

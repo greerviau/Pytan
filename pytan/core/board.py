@@ -1,4 +1,4 @@
-import hexmesh as hm
+import pytan.core.hexmesh as hm
 import copy
 import random
 

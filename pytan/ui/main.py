@@ -15,7 +15,7 @@ class CatanGUI(tk.Frame):
         self._controls_frame = GameControlsFrame(self, self.game)
 
         self._board_frame.grid(row=0, column=0, sticky=tk.NSEW)
-        self._controls_frame.grid(row=1, column=0, sticky=tk.W)
+        self._controls_frame.grid(row=0, column=1, sticky=tk.W)
 
         self._board_frame.redraw()
 

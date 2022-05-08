@@ -8,19 +8,13 @@ with open(readme_path, 'r') as fh:
 
 setuptools.setup(
     name='pytan',
-    version='3.9.2',
+    version='0.0.1',
+    packages=['pytan.core', 'pytan.ui'],
+    package_path='pytan',
     author='Greer Viau',
     author_email='gviau2@gmail.com',
     description='Python Settlers of Catan Implementation',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/greerviau/Pytan',
-    packages=setuptools.find_packages(),
-    classifiers=[
-        'Programming Language :: Python :: 3',
-        'License :: OSI Approved :: MIT License',
-        'Operating System :: OS Independent',
-    ],
-    python_requires='>=3.9',
-    install_requires=['networkx'],
+    url='https://github.com/greerviau/Pytan'
 )

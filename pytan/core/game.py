@@ -1,10 +1,10 @@
-import board
-import player as pl
+import pytan.core.board as board
+import pytan.core.player as pl
 import random
 from datetime import datetime
 import copy
 import os
-from cards import *
+from pytan.core.cards import *
 
 class Game(object):
     def __init__(self, players = [], board = board.Board()):
