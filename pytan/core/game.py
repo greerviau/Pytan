@@ -42,6 +42,8 @@ class Game(object):
         self._moves_made = 0
         self._turns = 0
 
+        self._log_file = None
+
         self._board.reset()
 
     def init_log_file(self):
@@ -109,9 +111,10 @@ class Game(object):
     def turns(self):
         return self._turns
     
-    def start_game(self):
+    def start_game(self, log=True):
         self.reset()
-        self.init_log_file()
+        if log:
+            self.init_log_file()
 
     def end_game(self):
         self.log('Ending Game')

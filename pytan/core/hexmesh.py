@@ -2,79 +2,78 @@ from enum import Enum
 from collections import Counter
 import numpy as np
 import copy
-from multipledispatch import dispatch
 
 class TTDirs(Enum):
-    NORTHEAST = 2
-    EAST = 34
-    SOUTHEAST = 32
-    SOUTHWEST = -2
-    WEST = -34
-    NORTHWEST = -32
+    NORTHEAST = +0x02
+    EAST = +0x22
+    SOUTHEAST = +0x20
+    SOUTHWEST = -0x02
+    WEST = -0x22
+    NORTHWEST = -0x20
 
 class TEDirs(Enum):
-    NORTHEAST = 1
-    EAST = 17
-    SOUTHEAST = 16
-    SOUTHWEST = -1
-    WEST = -17
-    NORTHWEST = -16
+    NORTHEAST = +0x01
+    EAST = +0x11
+    SOUTHEAST = +0x10
+    SOUTHWEST = -0x01
+    WEST = -0x11
+    NORTHWEST = -0x10
 
 class TNDirs(Enum):
-    NORTH = 1
-    NORTHEAST = 18
-    SOUTHEAST = 33
-    SOUTH = 16
-    SOUTHWEST = -1
-    NORTHWEST = -16
+    NORTH = +0x01
+    NORTHEAST = +0x12
+    SOUTHEAST = +0x21
+    SOUTH = +0x10
+    SOUTHWEST = -0x01
+    NORTHWEST = -0x10
 
 class NNDirs(Enum):
-    NORTH = -15
-    NORTHEAST = 17
-    SOUTHEAST = 17
-    SOUTH = 15
-    SOUTHWEST = -17
-    NORTHWEST = -17
+    NORTH = -0x0f
+    NORTHEAST = +0x11
+    SOUTHEAST = +0x11
+    SOUTH = +0x0f
+    SOUTHWEST = -0x11
+    NORTHWEST = -0x11
 
 class NTDirs(Enum):
-    NORTH = -16
-    NORTHEAST = 1
-    SOUTHEAST = 16
-    SOUTH = -1
-    SOUTHWEST = -18
-    NORTHWEST = -33
+    NORTH = -0x10
+    NORTHEAST = +0x01
+    SOUTHEAST = +0x10
+    SOUTH = -0x01
+    SOUTHWEST = -0x12
+    NORTHWEST = -0x21
 
 class NEDirs(Enum):
-    NORTH = -16
-    NORTHEAST = 0
-    SOUTHEAST = 0
-    SOUTH = -1
-    SOUTHWEST = -17
-    NORTHWEST = -17
+    NORTH = -0x10
+    NORTHEAST = +0x00
+    SOUTHEAST = +0x00
+    SOUTH = -0x01
+    SOUTHWEST = -0x11
+    NORTHWEST = -0x11
 
 class EEDirs(Enum):
-    NORTHEAST = 1
-    EAST = 17
-    SOUTHEAST = 16
-    SOUTHWEST = -1
-    WEST = -17
-    NORTHWEST = -16
+    NORTHEAST = +0x01
+    EAST = +0x11
+    SOUTHEAST = +0x10
+    SOUTHWEST = -0x01
+    WEST = -0x11
+    NORTHWEST = -0x10
 
 class ETDirs(Enum):
-    NORTHEAST = 1
-    EAST = 17
-    SOUTHEAST = 16
-    SOUTHWEST = -1
-    WEST = -17
-    NORTHWEST = -16
+    NORTHEAST = +0x01
+    EAST = +0x11
+    SOUTHEAST = +0x10
+    SOUTHWEST = -0x01
+    WEST = -0x11
+    NORTHWEST = -0x10
 
 class ENDirs(Enum):
-    NORTH = 1
-    NORTHEAST = 17
-    SOUTHEAST = 17
-    SOUTH = 16
-    SOUTHWEST = 0
-    NORTHWEST = 0
+    NORTH = +0x01
+    NORTHEAST = +0x11
+    SOUTHEAST = +0x11
+    SOUTH = +0x10
+    SOUTHWEST = +0x00
+    NORTHWEST = +0x00
 
 class HexObject(object):
     def __init__(self, hex_code, direction, data):
@@ -241,6 +240,8 @@ class HexMesh(object):
             next_tile += TTDirs.NORTHEAST.value
         self._tiles[next_tile] = Tile(next_tile)
 
+        self._tiles = dict(reversed(list(self._tiles.items())))
+
         self._n_tiles = len(self._tiles)
 
         nodes = []
@@ -254,15 +255,15 @@ class HexMesh(object):
 
     @property
     def tiles(self):
-        return self._tiles.values()
+        return self._tiles
     
     @property
     def nodes(self):
-        return self._nodes.values()
+        return self._nodes
     
     @property
     def edges(self):
-        return self._edges.values()
+        return self._edges
 
     @property
     def n_tiles(self):
@@ -296,8 +297,7 @@ class HexMesh(object):
         tile = self._tiles[hex_code]
         return self.get_neighboring_tiles(tile.hex_code)
 
-    @dispatch(Tile)
-    def get_neighboring_tiles(self, tile):
+    def get_neighboring_tiles(self, tile: Tile):
         return [self.try_get_value(self._tiles, t) for t in tile.neigboring_tiles if self.try_get_value(self._tiles, t)]
 
     # TILES NEIGHBORING NODES
@@ -305,8 +305,7 @@ class HexMesh(object):
         tile = self._tiles[hex_code]
         return self.get_neighboring_nodes(tile.hex_code)
 
-    @dispatch(Tile)
-    def get_neighboring_nodes(self, tile):
+    def get_neighboring_nodes(self, tile: Tile):
         return [self.try_get_value(self._nodes, n) for n in tile.neighboring_nodes if self.try_get_value(self._nodes, n)]
 
     # TILES NEIGHBORING EDGES
@@ -314,8 +313,7 @@ class HexMesh(object):
         tile = self._tiles[hex_code]
         return self.get_neighboring_edges(tile)
 
-    @dispatch(Tile)
-    def get_neighboring_edges(self, tile):
+    def get_neighboring_edges(self, tile: Tile):
         return [self.try_get_value(self._edges, e) for e in tile.neighboring_edges if self.try_get_value(self._edges, e)]
 
     '''
@@ -327,8 +325,7 @@ class HexMesh(object):
         node = self._nodes[hex_code]
         return self.get_neighboring_tiles(node)
 
-    @dispatch(Node)
-    def get_neighboring_tiles(self, node):
+    def get_neighboring_tiles(self, node: Node):
         return [self.try_get_value(self._tiles, t) for t in node.neighboring_tiles if self.try_get_value(self._tiles, t)]
 
     # NODES NEIGHBORING NODES
@@ -336,8 +333,7 @@ class HexMesh(object):
         node = self._nodes[hex_code]
         return self.get_neighboring_nodes(node)
 
-    @dispatch(Node)
-    def get_neighboring_nodes(self, node):
+    def get_neighboring_nodes(self, node: Node):
         return [self.try_get_value(self._nodes, n) for n in node.neighboring_nodes if self.try_get_value(self._nodes, n)]
 
     # NODES NEIGHBORING EDGES
@@ -345,8 +341,7 @@ class HexMesh(object):
         node = self._nodes[hex_code]
         return self.get_neighboring_edges(node)
 
-    @dispatch(Node)
-    def get_neighboring_edges(self, node):
+    def get_neighboring_edges(self, node: Node):
         return [self.try_get_value(self._edges, e) for e in node.neighboring_edges if self.try_get_value(self._edges, e)]
 
     '''
@@ -358,8 +353,7 @@ class HexMesh(object):
         edge = self._edges[hex_code]
         return self.get_neighboring_tiles_from_edge(edge)
 
-    @dispatch(Edge)
-    def get_neighboring_tiles(self, edge):
+    def get_neighboring_tiles(self, edge: Edge):
         return [self.try_get_value(self._tiles, t) for t in edge.neighboring_tiles if self.try_get_value(self._tiles, t)]
 
     # EDGES NEIGHBORING NODES
@@ -367,8 +361,7 @@ class HexMesh(object):
         edge = self._edges[hex_code]
         return self.get_neighboring_nodes_from_edge(edge) 
 
-    @dispatch(Edge)
-    def get_neighboring_nodes(self, edge):
+    def get_neighboring_nodes(self, edge: Edge):
         return [self.try_get_value(self._nodes, n) for n in edge.neighboring_nodes if self.try_get_value(self._nodes, n)]
 
     # EDGES NEIGHBORING EDGES
@@ -376,8 +369,7 @@ class HexMesh(object):
         edge = self._edges[hex_code]
         return self.get_neighboring_edges_from_edge(edge)
 
-    @dispatch(Edge)
-    def get_neighboring_edges(self, edge):
+    def get_neighboring_edges(self, edge: Edge):
         return [self.try_get_value(self._edges, e) for e in edge.neighboring_edges if self.try_get_value(self._edges, e)]
 
     '''

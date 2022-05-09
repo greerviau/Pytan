@@ -1,8 +1,17 @@
-import pytan.core.hexmesh as hm
+from pytan.core import hexmesh
 import copy
 import random
 
-TILES = {
+TILE_TYPE_TO_ID = {
+    'WHEAT': 0,
+    'WOOD': 1,
+    'SHEEP': 2,
+    'ORE': 3,
+    'BRICK': 4,
+    'DESERT': 5
+}
+
+TILE_ID_TO_TYPE = {
     0: 'WHEAT',
     1: 'WOOD',
     2: 'SHEEP',
@@ -31,11 +40,12 @@ PROB_COUNTS = {
     9: 2,
     10: 2,
     11: 2,
-    12:2
+    12:1
 }
 
-class CatanTile(object):
-    def __init__(self, prob, _type, identifier):
+class CatanTile(hexmesh.Tile):
+    def __init__(self, hex_code, prob, _type, identifier):
+        super().__init__(hex_code, None)
         self._prob = prob 
         self._type = _type
         self._id = identifier
@@ -54,6 +64,30 @@ class CatanTile(object):
 
     def __repr__(self):
         return f'{self._type} - {self._prob}'
+
+class Port(object):
+    def __init__(self, node1, node2, tile, direction, port_type):
+        self._node1 = node1
+        self._node2 = node2
+        self._tile = tile
+        self._direction = direction
+        self._port_type = port_type
+
+    @property
+    def node1(self):
+        return self._node1
+    
+    @property
+    def node2(self):
+        return self._node2
+    
+    @property
+    def tile(self):
+        return self._tile
+
+    @property
+    def port_type(self):
+        return self._port_type
 
 class Buildable(object):
     def __init__(self, owner, coord):
@@ -103,14 +137,14 @@ class Board(object):
         self.reset()
         
     def reset(self):
-        self._hex_mesh = hm.HexMesh(n_layers=2)
+        self._hex_mesh = hexmesh.HexMesh(n_layers=2)
 
         # Init board state
         available_tiles = []
         available_probs = []
 
-        for tile_id in TILES:
-            tile_type = TILES[tile_id]
+        for tile_type in TILE_TYPE_TO_ID:
+            tile_id = TILE_TYPE_TO_ID[tile_type]
             for _ in range(TILE_COUNTS[tile_type]):
                 available_tiles.append((tile_id, tile_type))
 
@@ -118,7 +152,7 @@ class Board(object):
             for _ in range(PROB_COUNTS[prob]):
                 available_probs.append(prob)
 
-        for tile in self._hex_mesh.tiles:
+        for tile_code in self._hex_mesh.tiles:
             tile_choice = random.choice(available_tiles)
             available_tiles.remove(tile_choice)
             tile_id, tile_type = tile_choice
@@ -126,18 +160,42 @@ class Board(object):
             prob = random.choice(available_probs)
             available_probs.remove(prob)
 
-            tile.data = CatanTile(prob, tile_type, tile_id)
+            self._hex_mesh.tiles[tile_code] = CatanTile(tile_code, prob, tile_type, tile_id)
+
+    @property
+    def tiles(self):
+        return self._hex_mesh.tiles
+
+    @property
+    def nodes(self):
+        return self._hex_mesh.nodes
+
+    @property
+    def edges(self):
+        return self._hex_mesh.edges
+
+    @property
+    def roads(self):
+        return [edge for edge in self._hex_mesh.edges.values() if type(edge.data) == Road]
+
+    @property
+    def settlements(self):
+        return [node for node in self._hex_mesh.nodes.values() if type(node.data) == Settlement]
+
+    @property
+    def cities(self):
+        return [node for node in self._hex_mesh.nodes.values() if type(node.data) == City]
 
     def find_tiles_with_prob(self, prob):
         tiles = []
-        for tile in self._hex_mesh.tiles:
+        for tile in self._hex_mesh.tiles.values():
             if type(tile.data) == CatanTile:
                 if tile.data.prob == prob:
                     tiles.append(tile)
         return tiles
 
     def find_empty_nodes(self):
-        return [node for node in self._hex_mesh.nodes if node.data == None]
+        return [node for node in self._hex_mesh.nodes.values() if node.data == None]
 
     def find_settlements_on_tile(self, tile):
         settlements = []
@@ -148,7 +206,7 @@ class Board(object):
 
     def find_settlement_nodes(self, player_id):
         settlements = []
-        for node in self._hex_mesh.nodes:
+        for node in self._hex_mesh.nodes.values():
             data = node.data
             if type(data) == Settlement:
                 if data.owner_id == player_id:
@@ -157,7 +215,7 @@ class Board(object):
 
     def find_legal_road_placements(self, player_id):
         legal_road_placements = []
-        for edge in self._hex_mesh.edges:
+        for edge in self._hex_mesh.edges.values():
             if edge.data == None:
                 legal = False
                 for e in self._hex_mesh.get_neighboring_edges(edge):
@@ -176,7 +234,7 @@ class Board(object):
     
     def find_legal_settlement_placements(self, player_id):
         legal_settlement_placements = []
-        for node in self._hex_mesh.nodes:
+        for node in self._hex_mesh.nodes.values():
             if node.data == None:
                 neighbor_settlements = 0
                 legal = False
@@ -222,7 +280,7 @@ class Board(object):
     def __repr__(self):
         s = 'Board\n\n'
         s += 'Tiles:\n'
-        for tile in self._hex_mesh.tiles:
+        for tile in self._hex_mesh.tiles.values():
             if type(tile.data) == CatanTile:
                 s += f'Coord: {hex(tile.hex_code)} - {tile.data}\n'
 
@@ -230,21 +288,21 @@ class Board(object):
         player_settlements = {}
         player_cities = {}
 
-        for edge in self._hex_mesh.edges:
+        for edge in self._hex_mesh.edges.values():
             if type(edge.data) == Road:
                 o_id = edge.data.owner_id
                 if o_id not in player_roads:
                     player_roads[o_id] = []
                 player_roads[o_id].append(edge.data)
 
-        for node in self._hex_mesh.nodes:
+        for node in self._hex_mesh.nodes.values():
             if type(node.data) == Settlement:
                 o_id = node.data.owner_id
                 if o_id not in player_settlements:
                     player_settlements[o_id] = []
                 player_settlements[o_id].append(node.data)
 
-        for node in self._hex_mesh.nodes:
+        for node in self._hex_mesh.nodes.values():
             if type(node.data) == City:
                 o_id = node.data.owner_id
                 if o_id not in player_settlements:
