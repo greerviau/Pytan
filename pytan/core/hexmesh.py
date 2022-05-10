@@ -3,255 +3,137 @@ from collections import Counter
 import numpy as np
 import copy
 
-class TTDirs(Enum):
-    NORTHEAST = +0x02
-    EAST = +0x22
-    SOUTHEAST = +0x20
-    SOUTHWEST = -0x02
-    WEST = -0x22
-    NORTHWEST = -0x20
+TT_DIRS = {
+    'NE': +0x02,
+    'E': +0x22,
+    'SE': +0x20,
+    'SW': -0x02,
+    'W': -0x22,
+    'NW': -0x20
+}
 
-class TEDirs(Enum):
-    NORTHEAST = +0x01
-    EAST = +0x11
-    SOUTHEAST = +0x10
-    SOUTHWEST = -0x01
-    WEST = -0x11
-    NORTHWEST = -0x10
+TN_DIRS= {
+    'N': +0x01,
+    'NE': +0x12,
+    'SE': +0x21,
+    'S': +0x10,
+    'SW': -0x01,
+    'NW': -0x10
+}
 
-class TNDirs(Enum):
-    NORTH = +0x01
-    NORTHEAST = +0x12
-    SOUTHEAST = +0x21
-    SOUTH = +0x10
-    SOUTHWEST = -0x01
-    NORTHWEST = -0x10
+TE_DIRS = {
+    'NE': +0x01,
+    'E': +0x11,
+    'SE': +0x10,
+    'SW': -0x01,
+    'W': -0x11,
+    'NW': -0x10
+}
 
-class NNDirs(Enum):
-    NORTH = -0x0f
-    NORTHEAST = +0x11
-    SOUTHEAST = +0x11
-    SOUTH = +0x0f
-    SOUTHWEST = -0x11
-    NORTHWEST = -0x11
+NN_DIRS = {
+    'N': -0x0f,
+    'NE': +0x11,
+    'SE': +0x11,
+    'S': +0x0f,
+    'SW': -0x11,
+    'NW': -0x11
+}
 
-class NTDirs(Enum):
-    NORTH = -0x10
-    NORTHEAST = +0x01
-    SOUTHEAST = +0x10
-    SOUTH = -0x01
-    SOUTHWEST = -0x12
-    NORTHWEST = -0x21
+NT_DIRS = {
+    'N': -0x10,
+    'NE': +0x01,
+    'SE': +0x10,
+    'S': -0x01,
+    'SW': -0x12,
+    'NW': -0x21
+}
 
-class NEDirs(Enum):
-    NORTH = -0x10
-    NORTHEAST = +0x00
-    SOUTHEAST = +0x00
-    SOUTH = -0x01
-    SOUTHWEST = -0x11
-    NORTHWEST = -0x11
+NE_DIRS = {
+    'N': -0x10,
+    'NE': +0x00,
+    'SE': +0x00,
+    'S': -0x01,
+    'SW': -0x11,
+    'NW': -0x11
+}
 
-class EEDirs(Enum):
-    NORTHEAST = +0x01
-    EAST = +0x11
-    SOUTHEAST = +0x10
-    SOUTHWEST = -0x01
-    WEST = -0x11
-    NORTHWEST = -0x10
+EE_DIRS = {
+    'NE': +0x01,
+    'E': +0x11,
+    'SE': +0x10,
+    'SW': -0x01,
+    'W': -0x11,
+    'NW': -0x10
+}
 
-class ETDirs(Enum):
-    NORTHEAST = +0x01
-    EAST = +0x11
-    SOUTHEAST = +0x10
-    SOUTHWEST = -0x01
-    WEST = -0x11
-    NORTHWEST = -0x10
+ET_DIRS = {
+    'NE': +0x01,
+    'E': +0x11,
+    'SE': +0x10,
+    'SW': -0x01,
+    'W': -0x11,
+    'NW': -0x10
+}
 
-class ENDirs(Enum):
-    NORTH = +0x01
-    NORTHEAST = +0x11
-    SOUTHEAST = +0x11
-    SOUTH = +0x10
-    SOUTHWEST = +0x00
-    NORTHWEST = +0x00
+EN_DIRS = {
+    'N': -0x01,
+    'NE': -0x11,
+    'SE': -0x11,
+    'S': +0x10,
+    'SW': +0x00,
+    'NW': +0x00
+}
 
-class HexObject(object):
-    def __init__(self, hex_code, direction, data):
-        self._hex_code = hex_code
-        self._direction = direction
-        self._data = data
+def direction_to_tile(offset):
+    for key, value in TT_DIRS.items():
+        if value == offset:
+            return key
+    return None
 
-    @property
-    def hex_code(self):
-        return self._hex_code
+def tile_to_node_direction(offset):
+    for key, value in TN_DIRS.items():
+        if value == offset:
+            return key
+    return None
 
-    @property
-    def direction(self):
-        return self._direction
-
-    @property
-    def data(self):
-        return self._data
-
-    @direction.setter
-    def direction(self, d):
-        self._direction = d
-
-    @data.setter
-    def data(self, d):
-        self._data = d
-
-    @staticmethod
-    def get_unique_hex_map(hex_objs):
-        u = {}
-        for h in hex_objs:
-            if h.hex_code not in u:
-                h_copy = copy.copy(h)
-                h_copy.direction = None
-                u[h.hex_code] = h_copy
-        return u
-
-    def __repr__(self):
-        return f'Hex: {hex(self._hex_code)}  \tDirection: {self._direction}  \tData: {str(self._data)}\n'
-
-class Node(HexObject):
-    def __init__(self, hex_code, direction, data = None):
-        #Init
-        super().__init__(hex_code, direction, data)
-
-        self._node_node_directions = []
-        self._node_edge_directions = []
-        self._node_tile_directions = []
-
-        if direction == TNDirs.NORTH or direction == TNDirs.SOUTHEAST or direction == TNDirs.SOUTHWEST:
-            self._node_node_directions = [ NNDirs.NORTH, NNDirs.SOUTHEAST, NNDirs.SOUTHWEST ]
-            self._node_edge_directions = [ NEDirs.NORTH, NEDirs.SOUTHEAST, NEDirs.SOUTHWEST ]
-            self._node_tile_directions = [ NTDirs.NORTHEAST, NTDirs.SOUTH, NTDirs.NORTHWEST ]
-        elif direction == TNDirs.NORTHEAST or direction == TNDirs.NORTHWEST or direction == TNDirs.SOUTH:
-            self._node_node_directions = [ NNDirs.NORTHEAST, NNDirs.NORTHWEST, NNDirs.SOUTH ]
-            self._node_edge_directions = [ NEDirs.NORTHEAST, NEDirs.NORTHWEST, NEDirs.SOUTH ]
-            self._node_tile_directions = [ NTDirs.NORTH, NTDirs.SOUTHEAST, NTDirs.SOUTHWEST ]
-
-    @property
-    def neighboring_nodes(self):
-        return [n.value + self._hex_code for n in self._node_node_directions]
-
-    @property
-    def neighboring_edges(self):
-        return [e.value + self._hex_code for e in self._node_edge_directions]
-
-    @property
-    def neighboring_tiles(self):
-        return [t.value + self._hex_code for t in self._node_tile_directions]
-
-class Edge(HexObject):
-    def __init__(self, hex_code, direction, data = None):
-        #Init
-        super().__init__(hex_code, direction, data)
-        
-        self._edge_edge_directions = []
-        self._edge_node_directions = []
-        self._edge_tile_directions = []
-
-        if direction == TEDirs.NORTHEAST or direction == TEDirs.SOUTHWEST:
-            self._edge_edge_directions = [ EEDirs.EAST, EEDirs.SOUTHEAST, EEDirs.WEST, EEDirs.NORTHWEST ]
-            self._edge_node_directions = [ ENDirs.SOUTHEAST, ENDirs.NORTHWEST ]
-            self._edge_tile_directions = [ ENDirs.NORTHEAST, ENDirs.SOUTHWEST ]
-        elif direction == TEDirs.EAST or direction == TEDirs.WEST:
-            self._edge_edge_directions = [ EEDirs.NORTHEAST, EEDirs.SOUTHEAST, EEDirs.SOUTHWEST, EEDirs.NORTHWEST ]
-            self._edge_node_directions = [ ENDirs.NORTH, ENDirs.SOUTH ]
-            self._edge_tile_directions = [ ETDirs.EAST, ETDirs.WEST ]
-        elif direction == TEDirs.NORTHWEST or direction == TEDirs.SOUTHEAST:
-            self._edge_edge_directions = [ EEDirs.NORTHEAST, EEDirs.EAST, EEDirs.SOUTHWEST, EEDirs.WEST ]
-            self._edge_node_directions = [ ENDirs.NORTHEAST, ENDirs.SOUTHWEST ]
-            self._edge_tile_directions = [ ETDirs.SOUTHEAST, ETDirs.NORTHWEST ]
-
-    @property
-    def neighboring_nodes(self):
-        return [n.value + self._hex_code for n in self._edge_node_directions]
-
-    @property
-    def neighboring_edges(self):
-        return [e.value + self._hex_code for e in self._edge_edge_directions]
-
-    @property
-    def neighboring_tiles(self):
-        return [t.value + self._hex_code for t in self._edge_tile_directions]
-
-class Tile(HexObject):
-    def __init__(self, hex_code, data = None):
-        #Init
-        super().__init__(hex_code, None, data)
-        self._nodes = []
-        self._edges = []
-        for d in TNDirs:
-            self._nodes.append(Node(self._hex_code + d.value, d))
-        
-        for d in TEDirs:
-            self._edges.append(Edge(self._hex_code + d.value, d))
-
-    @property
-    def nodes(self):
-        return self._nodes
-
-    @property
-    def edges(self):
-        return self._edges
-
-    @property
-    def neighboring_tiles(self):
-        return [d.value + self._hex_code for d in TTDirs]
-
-    @property
-    def neighboring_nodes(self):
-        return [n.hex_code for n in self._nodes]
-
-    @property
-    def get_edges(self):
-        return [e.hex_code for e in self._edges]
-    
-    def __repr__(self):
-        s = f'Hex: {hex(self._hex_code)} - Data: {self._data}\n'
-        s += 'Nodes:\n'
-        for i, n in enumerate(self._nodes):
-            s += f'\t{n}'
-        s += 'Edges:\n'
-        for i, e in enumerate(self._edges):
-            s += f'\t{e}'
-        return s
-
+def tile_to_edge_direction(offset):
+    for key, value in TE_DIRS.items():
+        if value == offset:
+            return key
+    return None
     
 class HexMesh(object):
     def __init__(self, n_layers=0):
         #Init
         self._n_layers = n_layers
         self._tiles = {}
+        self._nodes = {}
+        self._edges = {}
 
         next_tile = 0x11
         for n in range(n_layers, 0, -1):
-            self._tiles[next_tile] = Tile(next_tile)
-            for d in TTDirs:
+            self._tiles[next_tile] = None
+            for d in TT_DIRS.values():
                 r = n
-                if d == TTDirs.NORTHWEST:
+                if d == TT_DIRS['NW']:
                     r -= 1
                 for i in range(r):
-                    next_tile += d.value
-                    self._tiles[next_tile] = Tile(next_tile)
-            next_tile += TTDirs.NORTHEAST.value
-        self._tiles[next_tile] = Tile(next_tile)
+                    next_tile += d
+                    self._tiles[next_tile] = None
+            next_tile += TT_DIRS['NE']
+        self._tiles[next_tile] = None
 
         self._tiles = dict(reversed(list(self._tiles.items())))
 
         self._n_tiles = len(self._tiles)
 
-        nodes = []
-        edges = []
-        for tile in self._tiles.values():
-            nodes.extend(tile.nodes)
-            edges.extend(tile.edges)
-
-        self._nodes = HexObject.get_unique_hex_map(nodes)
-        self._edges = HexObject.get_unique_hex_map(edges)
+        for tile in self._tiles:
+            nodes = self.tile_neighboring_nodes(tile)
+            for node in nodes:
+                self._nodes[node] = None
+            edges = self.tile_neighboring_edges(tile)
+            for edge in edges:
+                self._edges[edge] = None
 
     @property
     def tiles(self):
@@ -265,22 +147,145 @@ class HexMesh(object):
     def edges(self):
         return self._edges
 
-    @property
-    def n_tiles(self):
-        return self._n_tiles
+    def hex_digits(self, coord):
+        h = hex(coord)
+        d1 = int(h[2], 16)
+        d2 = 0
+        try:
+            d2 = int(h[3], 16)
+        except IndexError:
+            d2 = d1
+            d1 = 0
+        return d1, d2
+    
+    def tile_neighboring_tiles(self, tile_coord):
+        tile = []
+        for d in TT_DIRS.values():
+            tile.append(tile_coord + d)
 
-    @property
-    def n_layers(self):
-        return self._n_layers
+    def tile_neighboring_nodes(self, tile_coord):
+        nodes = []
+        for d in TN_DIRS.values():
+            nodes.append(tile_coord + d)
 
-    def get_tile(self, hex_code):
-        return self._tiles[hex_code]
+        return nodes
 
-    def get_node(self, hex_code):
-        return self._nodes[hex_code]
+    def tile_neighboring_edges(self, tile_coord):
+        edges = []
+        for d in TE_DIRS.values():
+            edges.append(tile_coord + d)
 
-    def get_edge(self, hex_code):
-        return self._edges[hex_code]
+        return edges
+
+    def node_neighboring_tiles(self, node_coord):
+        tiles = []
+        d1, d2 = self.hex_digits(node_coord)
+        if d2 % 2 == 0:
+            tiles.append(node_coord + NT_DIRS['NE'])
+            tiles.append(node_coord + NT_DIRS['S'])
+            tiles.append(node_coord + NT_DIRS['NW'])
+        else:
+            tiles.append(node_coord + NT_DIRS['N'])
+            tiles.append(node_coord + NT_DIRS['SE'])
+            tiles.append(node_coord + NT_DIRS['SW'])
+
+        return self.confirm_tiles_exist(tiles)
+
+    def node_neighboring_nodes(self, node_coord):
+        nodes = []
+        d1, d2 = self.hex_digits(node_coord)
+        if d2 % 2 == 0:
+            node.append(node_coord + NN_DIRS['N'])
+            node.append(node_coord + NN_DIRS['SE'])
+            node.append(node_coord + NN_DIRS['SW'])
+        else:
+            node.append(node_coord + NN_DIRS['NE'])
+            node.append(node_coord + NN_DIRS['S'])
+            node.append(node_coord + NN_DIRS['NW'])
+
+        return self.confirm_nodes_exist(nodes)
+
+    def node_neighboring_edges(self, node_coord):
+        edges = []
+        d1, d2 = self.hex_digits(node_coord)
+        if d2 % 2 == 0:
+            edges.append(node_coord + NE_DIRS['N'])
+            edges.append(node_coord + NE_DIRS['SE'])
+            edges.append(node_coord + NE_DIRS['SW'])
+        else:
+            edges.append(node_coord + NE_DIRS['NE'])
+            edges.append(node_coord + NE_DIRS['S'])
+            edges.append(node_coord + NE_DIRS['NW'])
+
+        return self.confirm_edges_exist(edges)
+
+    def edge_neighboring_tiles(self, edge_coord):
+        tiles = []
+        d1, d2 = self.hex_digits(edge_coord)
+        if d1 % 2 == 0 and d2 % 2 == 0:
+            tiles.append(edge_coord + ET_DIRS['E'])
+            tiles.append(edge_coord + ET_DIRS['W'])
+        if d1 % 2 == 0:
+            tiles.append(edge_coord + ET_DIRS['SE'])
+            tiles.append(edge_coord + ET_DIRS['NW'])
+        else:
+            tiles.append(edge_coord + ET_DIRS['NE'])
+            tiles.append(edge_coord + ET_DIRS['SW'])
+
+        return self.confirm_tiles_exist(tiles)
+
+    def edge_neighboring_nodes(self, edge_coord):
+        nodes = []
+        d1, d2 = self.hex_digits(edge_coord)
+        if d1 % 2 == 0 and d2 % 2 == 0:
+            nodes.append(edge_coord + EN_DIRS['N'])
+            nodes.append(edge_coord + EN_DIRS['S'])
+        if d1 % 2 == 0:
+            nodes.append(edge_coord + EN_DIRS['NE'])
+            nodes.append(edge_coord + EN_DIRS['SW'])
+        else:
+            nodes.append(edge_coord + EN_DIRS['SE'])
+            nodes.append(edge_coord + EN_DIRS['NW'])
+
+        return self.confirm_nodes_exist(nodes)
+    
+    def edge_neighboring_edges(self, edge_coord):
+        edges = []
+        d1, d2 = self.hex_digits(edge_coord)
+        if d1 % 2 == 0 and d2 % 2 == 0:
+            edges.append(edge_coord + EE_DIRS['NE'])
+            edges.append(edge_coord + EE_DIRS['SE'])
+            edges.append(edge_coord + EE_DIRS['SW'])
+            edges.append(edge_coord + EE_DIRS['NW'])
+        if d1 % 2 == 0:
+            edges.append(edge_coord + EE_DIRS['NE'])
+            edges.append(edge_coord + EE_DIRS['E'])
+            edges.append(edge_coord + EE_DIRS['SW'])
+            edges.append(edge_coord + EE_DIRS['W'])
+        else:
+            edges.append(edge_coord + EE_DIRS['E'])
+            edges.append(edge_coord + EE_DIRS['SE'])
+            edges.append(edge_coord + EE_DIRS['W'])
+            edges.append(edge_coord + EE_DIRS['NW'])
+
+        return self.confirm_edges_exist(edges)
+
+    def get_nearest_tile_to_node(self, node_coord):
+        tiles = self.node_neighboring_tiles(node_coord)
+        return list(tiles.keys())[0] 
+
+    def get_nearest_tile_to_edge(self, edge_coord):
+        tiles = self.edge_neighboring_tiles(edge_coord)
+        return list(tiles.keys())[0] 
+
+    def confirm_tiles_exist(self, tiles):
+        return {tile: self.try_get_value(self._tiles, tile) for tile in tiles}
+
+    def confirm_nodes_exist(self, nodes):
+        return {node: self.try_get_value(self._nodes, node) for node in nodes}
+
+    def confirm_edges_exist(self, edges):
+        return {edge: self.try_get_value(self._edges, edge) for edge in edges}
 
     def try_get_value(self, hmap, key):
         try:
@@ -288,110 +293,8 @@ class HexMesh(object):
         except KeyError:
             pass
 
-    '''
-    TILE HELPER FUNCTIONS
-    '''
-
-    # TILES NEIGHBORING TILES
-    def get_neighboring_tiles_from_tile(self, hex_code):
-        tile = self._tiles[hex_code]
-        return self.get_neighboring_tiles(tile.hex_code)
-
-    def get_neighboring_tiles(self, tile: Tile):
-        return [self.try_get_value(self._tiles, t) for t in tile.neigboring_tiles if self.try_get_value(self._tiles, t)]
-
-    # TILES NEIGHBORING NODES
-    def get_neighboring_nodes_from_tile(self, hex_code):
-        tile = self._tiles[hex_code]
-        return self.get_neighboring_nodes(tile.hex_code)
-
-    def get_neighboring_nodes(self, tile: Tile):
-        return [self.try_get_value(self._nodes, n) for n in tile.neighboring_nodes if self.try_get_value(self._nodes, n)]
-
-    # TILES NEIGHBORING EDGES
-    def get_neighboring_edges_from_tile(self, hex_code):
-        tile = self._tiles[hex_code]
-        return self.get_neighboring_edges(tile)
-
-    def get_neighboring_edges(self, tile: Tile):
-        return [self.try_get_value(self._edges, e) for e in tile.neighboring_edges if self.try_get_value(self._edges, e)]
-
-    '''
-    NODE HELPER FUNCTIONS
-    '''
-
-    # NODES NEIGHBORING TILES
-    def get_neighboring_tiles_from_node(self, hex_code):
-        node = self._nodes[hex_code]
-        return self.get_neighboring_tiles(node)
-
-    def get_neighboring_tiles(self, node: Node):
-        return [self.try_get_value(self._tiles, t) for t in node.neighboring_tiles if self.try_get_value(self._tiles, t)]
-
-    # NODES NEIGHBORING NODES
-    def get_neighboring_nodes_from_node(self, hex_code):
-        node = self._nodes[hex_code]
-        return self.get_neighboring_nodes(node)
-
-    def get_neighboring_nodes(self, node: Node):
-        return [self.try_get_value(self._nodes, n) for n in node.neighboring_nodes if self.try_get_value(self._nodes, n)]
-
-    # NODES NEIGHBORING EDGES
-    def get_neighboring_edges_from_node(self, hex_code):
-        node = self._nodes[hex_code]
-        return self.get_neighboring_edges(node)
-
-    def get_neighboring_edges(self, node: Node):
-        return [self.try_get_value(self._edges, e) for e in node.neighboring_edges if self.try_get_value(self._edges, e)]
-
-    '''
-    EDGE HELPER FUNCTIONS
-    '''
-
-    # EDGES NEIGHBORING TILES
-    def get_neighboring_tiles_from_edge(self, hex_code):
-        edge = self._edges[hex_code]
-        return self.get_neighboring_tiles_from_edge(edge)
-
-    def get_neighboring_tiles(self, edge: Edge):
-        return [self.try_get_value(self._tiles, t) for t in edge.neighboring_tiles if self.try_get_value(self._tiles, t)]
-
-    # EDGES NEIGHBORING NODES
-    def get_neighboring_nodes_from_edge(self, hex_code):
-        edge = self._edges[hex_code]
-        return self.get_neighboring_nodes_from_edge(edge) 
-
-    def get_neighboring_nodes(self, edge: Edge):
-        return [self.try_get_value(self._nodes, n) for n in edge.neighboring_nodes if self.try_get_value(self._nodes, n)]
-
-    # EDGES NEIGHBORING EDGES
-    def get_neighboring_edges_from_edge(self, hex_code):
-        edge = self._edges[hex_code]
-        return self.get_neighboring_edges_from_edge(edge)
-
-    def get_neighboring_edges(self, edge: Edge):
-        return [self.try_get_value(self._edges, e) for e in edge.neighboring_edges if self.try_get_value(self._edges, e)]
-
-    '''
-    END HELPER FUNCTIONS
-    '''
-
     def __repr__(self):
         s = f'Mesh - N_Tiles: {self._n_tiles} - N_Layers: {self._n_layers}\n'
-        for i, tile in enumerate(self._tiles.values()):
-            s += f'Tile {i+1} - {tile}\n'
+        for i, (coord, tile) in enumerate(self._tiles.items()):
+            s += f'Tile {i+1} - {coord}:{tile}\n'
         return s
-
-if __name__ == '__main__':
-    mesh = HexMesh(n_layers = 3)
-    #print(f'{len(mesh.edges)} Edges')
-    #print(mesh.edges.values())
-    #tile = mesh.get_tile(0x57)
-    #print(tile)
-    node = mesh.get_node(0x67)
-    print(node)
-    print(node.neighboring_edges)
-    print(mesh.get_neighboring_edges(node))
-    #edge = mesh.get_edge(0x07)
-    #print(edge)
-    #print(mesh.get_neighboring_edges(edge))

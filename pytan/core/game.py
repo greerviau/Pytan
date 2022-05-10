@@ -1,10 +1,10 @@
-import pytan.core.board as board
-import pytan.core.player as pl
+from pytan.core import board
+from pytan.core.player import Player
+from pytan.core.cards import *
 import random
 from datetime import datetime
 import copy
 import os
-from pytan.core.cards import *
 
 class Game(object):
     def __init__(self, players = [], board = board.Board()):
@@ -13,10 +13,10 @@ class Game(object):
             self._players = players
         else:
             self._players = [
-                pl.Player('Player 1', 0, 'red'),
-                pl.Player('Player 2', 1, 'blue'),
-                pl.Player('Player 3', 2, 'green'),
-                pl.Player('Player 4', 3, 'orange')
+                Player('Player 1', 0, 'red'),
+                Player('Player 2', 1, 'blue'),
+                Player('Player 3', 2, 'green'),
+                Player('Player 4', 3, 'orange')
             ]
     
         self._board = board
@@ -25,7 +25,7 @@ class Game(object):
         
     def reset(self):
         # Reset the game state
-        self._players = [pl.Player.clone_player(p) for p in self._players]
+        self._players = [p.clone_player() for p in self._players]
 
         self._resource_card_counts = copy.copy(RESOURCE_CARD_COUNTS)
         self._dev_card_counts = copy.copy(DEV_CARD_COUNTS)
@@ -157,7 +157,7 @@ class Game(object):
     
     def build_legal_road(self, coord):
         legal_road_placements = self._board.find_legal_road_placements(self._current_player.identifier)
-        if coord in [e.hex_code for e in legal_road_placements]:
+        if coord in legal_road_placements:
             self.log(f'{self._current_player} built road at {hex(coord)}')
             self._board.build_road(coord, self._current_player)
             self._moves_made += 1
@@ -175,7 +175,7 @@ class Game(object):
     
     def build_legal_settlement(self, coord):
         legal_settlement_placements = self._board.find_legal_settlement_placements(self._current_player.identifier)
-        if coord in [n.hex_code for n in legal_settlement_placements]:
+        if coord in legal_settlement_placements:
             self.log(f'{self._current_player} built settlement at {hex(coord)}')
             settlement = self._board.build_settlement(coord, self._current_player)
             self._moves_made += 1
@@ -193,8 +193,7 @@ class Game(object):
 
         
     def build_first_settlement(self, coord):
-        empty_nodes = self._board.find_empty_nodes()
-        if coord in [n.hex_code for n in empty_nodes]:
+        if coord in self._board.empty_nodes:
             self.log(f'{self._current_player} built their first settlement at {hex(coord)}')
             settlement = self._board.build_settlement(coord, self._current_player)
             self._moves_made += 1
@@ -219,4 +218,5 @@ class Game(object):
 if __name__ == '__main__':
     game = Game()
     print(game.players)
-    game.start_game()
+    game.start_game(log=False)
+    game.build_first_settlement(0x67)

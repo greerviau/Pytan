@@ -1,10 +1,11 @@
-RESOURCE_CARDS = {
-    0: 'WHEAT',
-    1: 'WOOD',
-    2: 'SHEEP',
-    3: 'ORE',
-    4: 'BRICK'
-}
+from enum import Enum
+
+class RESOURCE_CARDS(Enum):
+    WHEAT = 'WHEAT'
+    WOOD = 'WOOD'
+    SHEEP = 'SHEEP'
+    ORE = 'ORE'
+    BRICK = 'BRICK'
 
 RESOURCE_CARD_COUNTS = {
     'WHEAT': 15,
@@ -14,13 +15,12 @@ RESOURCE_CARD_COUNTS = {
     'BRICK': 15
 }
 
-DEV_CARDS = {
-    0: 'VP',
-    1: 'KNIGHT',
-    2: 'MONOPOLY',
-    3: 'ROADBUILD',
-    4: 'PLENTY'
-}
+class DEV_CARDS(Enum):
+    VP = 'VP'
+    KNIGHT = 'KNIGHT'
+    MONOPOLY = 'MONOPOLY'
+    ROADBUILD = 'ROADBUILD'
+    PLENTY = 'PLENTY'
 
 DEV_CARD_COUNTS = {
     'VP': 5,

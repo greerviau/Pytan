@@ -1,8 +1,8 @@
 import tkinter as tk
 import tkutils
 import math
-from pytan.core.hexmesh import TTDirs
-from pytan.core.board import Road, Settlement, City
+from pytan.core.board import Piece, PieceTypes
+from pytan.core import hexmesh
 
 class BoardFrame(tk.Frame):
     def __init__(self, master, game, *args, **kwargs):
@@ -60,7 +60,7 @@ class BoardFrame(tk.Frame):
             # Calculate the center of this tile as an offset from the center of
             # the neighboring tile in the given direction.
             ref_center = centers[last]
-            direction = last - tile_id
+            direction = hexmesh.direction_to_tile(last - tile_id)
             theta = self._tile_angle_order.index(direction) * 60
             radius = 2 * self._center_to_edge + self._tile_padding
             dx = radius * math.cos(math.radians(theta))
@@ -77,7 +77,7 @@ class BoardFrame(tk.Frame):
         return dict(centers)
 
     def _draw_tile(self, x, y, terrain, tile):
-        self._draw_hexagon(self._tile_radius, offset=(x, y), fill=self._colors[terrain], tags=self._tile_tag(tile))
+        self._draw_hexagon(self._tile_radius, offset=(x, y), fill=self._colors[terrain.value], tags=self._tile_tag(tile))
 
     def _draw_hexagon(self, radius, offset=(0, 0), rotate=30, fill='black', tags=None):
         points = self._hex_points(radius, offset, rotate)
@@ -195,13 +195,13 @@ class BoardFrame(tk.Frame):
     def _draw_piece(self, coord, piece, terrain_centers, ghost=False):
         x, y, angle = self._get_piece_center(coord, piece, terrain_centers)
         tag = None
-        if type(piece) == Road:
+        if piece.piece_type == PieceTypes.ROAD:
             self._draw_road(x, y, coord, piece, angle=angle, ghost=ghost)
             tag = self._road_tag(coord)
-        elif type(piece) == Settlement:
+        elif piece.piece_type == PieceTypes.SETTLEMENT:
             self._draw_settlement(x, y, coord, piece, ghost=ghost)
             tag = self._settlement_tag(coord)
-        elif type(piece) == City:
+        elif piece.piece_type == PieceTypes.CITY:
             self._draw_city(x, y, coord, piece, ghost=ghost)
             tag = self._city_tag(coord)
         #elif type(piece) == PieceType.robber:
@@ -219,10 +219,10 @@ class BoardFrame(tk.Frame):
     def _piece_tkinter_opts(self, coord, piece, **kwargs):
         opts = dict()
         tag_funcs = {
-            Road: self._road_tag,
-            Settlement: self._settlement_tag,
-            City: self._city_tag,
-            #PieceType.robber: self._robber_tag,
+            PieceTypes.ROAD: self._road_tag,
+            PieceTypes.SETTLEMENT: self._settlement_tag,
+            PieceTypes.CITY: self._city_tag,
+            PieceTypes.ROBBER: self._robber_tag,
         }
         color = piece.owner.color
         '''
@@ -231,7 +231,7 @@ class BoardFrame(tk.Frame):
             color = 'black'
         '''
 
-        opts['tags'] = tag_funcs[type(piece)](coord)
+        opts['tags'] = tag_funcs[piece.piece_type](coord)
         opts['outline'] = color
         opts['fill'] = color
         if 'ghost' in kwargs and kwargs['ghost'] == True:
@@ -301,9 +301,9 @@ class BoardFrame(tk.Frame):
         """Returns roads, settlements, and cities on the board as lists of (coord, piece) tuples.
         Also returns the robber as a single (coord, piece) tuple.
         """
-        roads = self._board.roads
-        settlements = self._board.settlements
-        cities = self._board.cities
+        roads = self._board.roads.values()
+        settlements = self._board.settlements.values()
+        cities = self._board.cities.values()
         robber = None
         return roads, settlements, cities, robber
 
@@ -313,22 +313,20 @@ class BoardFrame(tk.Frame):
         Returns the piece's center, as an (x,y) pair. Also returns the angle the
         piece should be rotated at, if any
         """
-        if type(piece.data) == Road:
+        if piece.piece_type == PieceTypes.ROAD:
             # these pieces are on edges
-            tile_id = hexgrid.nearest_tile_to_edge(piece_coord)
-            tile_coord = hexgrid.tile_id_to_coord(tile_id)
-            direction = hexgrid.tile_edge_offset_to_direction(piece_coord - tile_coord)
-            terrain_x, terrain_y = terrain_centers[tile_id]
+            tile_coord = self._board.get_nearest_tile_to_edge(piece_coord)
+            direction = hexmesh.tile_to_edge_direction(piece_coord - tile_coord)
+            terrain_x, terrain_y = terrain_centers[tile_coord]
             angle = 60*self._edge_angle_order.index(direction)
             dx = math.cos(math.radians(angle)) * self.distance_tile_to_edge()
             dy = math.sin(math.radians(angle)) * self.distance_tile_to_edge()
             return terrain_x + dx, terrain_y + dy, angle + 90
-        elif type(piece.data) in [Settlement, City]:
+        elif piece.piece_type in [PieceTypes.SETTLEMENT, PieceTypes.CITY]:
             # these pieces are on nodes
-            tile_id = hexgrid.nearest_tile_to_node(piece_coord)
-            tile_coord = hexgrid.tile_id_to_coord(tile_id)
-            direction = hexgrid.tile_node_offset_to_direction(piece_coord - tile_coord)
-            terrain_x, terrain_y = terrain_centers[tile_id]
+            tile_coord = self._board.get_nearest_tile_to_node(piece_coord)
+            direction = hexmesh.tile_to_node_direction(piece_coord - tile_coord)
+            terrain_x, terrain_y = terrain_centers[tile_coord]
             angle = 30 + 60*self._node_angle_order.index(direction)
             dx = math.cos(math.radians(angle)) * self._tile_radius
             dy = math.sin(math.radians(angle)) * self._tile_radius
@@ -370,7 +368,7 @@ class BoardFrame(tk.Frame):
         return self._tile_radius * math.cos(math.radians(30)) + 1/2*self._tile_padding
 
     def _tile_tag(self, tile):
-        return 'tile_' + str(tile.hex_code)
+        return 'tile_' + str(tile.coord)
 
     def _road_tag(self, coord):
         return 'road_' + hex(coord)
@@ -410,9 +408,9 @@ class BoardFrame(tk.Frame):
     _tile_radius  = 60
     _tile_padding = 3
     _board_center = (300, 300)
-    _tile_angle_order = (TTDirs.EAST.value, TTDirs.SOUTHEAST.value, TTDirs.SOUTHWEST.value, TTDirs.WEST.value, TTDirs.NORTHWEST.value, TTDirs.NORTHEAST.value) # 0 + 60*index
-    _edge_angle_order = ('EAST', 'SOUTHEAST', 'SOUTHWEST', 'WEST', 'NORTHWEST', 'NORTHEAST') # 0 + 60*index
-    _node_angle_order = ('SOUTHEAST', 'SOUTH', 'SOUTHWEST', 'NORTHWEST', 'NORTH', 'NORTHEAST') # 30 + 60*index
+    _tile_angle_order = ('E', 'SE', 'SW', 'W', 'NW', 'NE') # 0 + 60*index
+    _edge_angle_order = ('E', 'SE', 'SW', 'W', 'NW', 'NE') # 0 + 60*index
+    _node_angle_order = ('SE', 'S', 'SW', 'NE', 'N', 'NE') # 30 + 60*index
     _hex_font     = (('Helvetica'), 22)
     _colors = {
         'WOOD': '#12782D',

@@ -12,6 +12,7 @@ class CatanGUI(tk.Frame):
         self.game = Game()
         self.game.start_game(log=False)
         self.game.build_first_settlement(0x67)
+        self.game.build_road(0x67)
 
         self._board_frame = BoardFrame(self, self.game)
         self._controls_frame = GameControlsFrame(self, self.game)
