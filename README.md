@@ -43,3 +43,10 @@ gui.mainloop()
 * Complete GUI
 * Build GYM Environment for RL
 
+## References
+Shoutout to [rosshamish](https://github.com/rosshamish) for building some very usefull Catan projects. I referenced them to help build this project. I did not utilize any of them directly because some features were out of date (and I wanted to build it myself anyway), but they were super helpful in understanding some of the underlying logic in building Catan.
+
+* HexMesh implementation based on [rosshamish/hexgrid](https://github.com/rosshamish/hexgrid)
+* Catan gameplay logic referenced from [rosshamish/catan-py](https://github.com/rosshamish/catan-py)
+* GUI elements inspired and referenced from [rosshamish/catan-spectator](https://github.com/rosshamish/catan-spectator)
+
