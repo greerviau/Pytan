@@ -2,7 +2,8 @@ from enum import Enum
 
 class GameStates(Enum):
     UNDEFINED = 'UNDEFINED'
-    SETUP = 'SETUP'
+    STARTING_SETTLEMENT = 'STARTING_SETTLEMENT'
+    STARTING_ROAD = 'STARTING_ROAD'
     INGAME = 'INGAME'
     BUILDING_ROAD = 'BUILDING_ROAD'
     BUILDING_SETTLEMENT = 'BUILDING_SETTLEMENT'
@@ -27,13 +28,17 @@ class CatanGameState(object):
         return self._state == other
 
     def can_build_road(self):
-        if self._state == GameStates.INGAME:
+        if self._state == GameStates.STARTING_ROAD:
+            return True
+        elif self._state == GameStates.INGAME:
             if self.game.current_player.can_buy_road():
                 return True
         return False
 
     def can_build_settlement(self):
-        if self._state == GameStates.INGAME:
+        if self._state == GameStates.STARTING_SETTLEMENT:
+            return True
+        elif self._state == GameStates.INGAME:
             if self.game.current_player.can_buy_settlement():
                 return True
         return False

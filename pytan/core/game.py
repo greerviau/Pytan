@@ -36,7 +36,7 @@ class Game(object):
         # Reset the game state
         self._players = [p.clone_player() for p in self._players]
 
-        self._state = CatanGameState(self)
+        self._game_state = CatanGameState(self)
 
         self._resource_card_counts = copy.copy(RESOURCE_CARD_COUNTS)
         self._dev_card_counts = copy.copy(DEV_CARD_COUNTS)
@@ -91,7 +91,7 @@ class Game(object):
 
     @property
     def state(self):
-        return self._state
+        return self._game_state
     
     @property
     def resource_card_counts(self):
@@ -131,10 +131,11 @@ class Game(object):
 
     @state.setter
     def state(self, s):
-        self._state = s
+        self._game_state = s
     
     def start_game(self):
         self.reset()
+        self._game_state = GameStates.STARTING_SETTLEMENT
 
     def end_game(self, log=True):
         self.log('Ending Game')
@@ -174,7 +175,7 @@ class Game(object):
         self._turns += 1
 
     def legal_road_placements(self):
-        if self._state == GameStates.SETUP:
+        if self._game_state == GameStates.STARTING_ROAD:
             return self._board.legal_starting_road_placements(self._current_player.identifier)
         else:
             return self._board.legal_road_placements(self._current_player.identifier)
@@ -218,7 +219,7 @@ class Game(object):
             self.log(f'{self._current_player} cannot build road at {hex(coord)}')
 
     def legal_settlement_placements(self):
-        if self._state == GameStates.SETUP:
+        if self._game_state == GameStates.STARTING_SETTLEMENT:
             return self._board.legal_starting_settlement_placements(self._current_player.identifier)
         else:
             return self._board.legal_settlement_placements(self._current_player.identifier)
