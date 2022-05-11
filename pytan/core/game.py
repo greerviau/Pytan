@@ -130,12 +130,12 @@ class Game(object):
         return self._turns
 
     @state.setter
-    def state(self, s):
-        self._game_state = s
+    def state(self, s: GameStates):
+        self._game_state.state = s
     
     def start_game(self):
         self.reset()
-        self._game_state = GameStates.STARTING_SETTLEMENT
+        self.state = GameStates.STARTING_SETTLEMENT
 
     def end_game(self, log=True):
         self.log('Ending Game')

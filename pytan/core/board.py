@@ -1,5 +1,6 @@
 from pytan.core.hexmesh import HexMesh
 from pytan.core.player import Player
+from pytan.core.piece import PieceTypes, Piece
 from enum import Enum
 import copy
 import random
@@ -81,37 +82,6 @@ class Port(object):
     
     def __repr__(self):
         return f'<Port Type: {self._port_type} - Coords: {hex(self._coord_1)}:{hex(self._coord_2)} - Tile: {self._tile}>'
-
-class PieceTypes(Enum):
-    ROAD = 0
-    SETTLEMENT = 1
-    CITY = 2
-    ROBBER = 3
-
-class Piece(object):
-    def __init__(self, coord: int, owner: Player, piece_type: PieceTypes):
-        self._coord = coord
-        self._owner = owner
-        self._piece_type = piece_type
-
-    @property
-    def coord(self):
-        return self._coord
-    
-    @property
-    def owner(self):
-        return self._owner
-
-    @property
-    def owner_id(self):
-        return self._owner.identifier
-
-    @property
-    def piece_type(self):
-        return self._piece_type
-
-    def __repr__(self):
-        return f'<Piece Type: {self._piece_type}  - Coord: {hex(self._coord)} - Owner: {self._owner}>'
 
 class Board(HexMesh):
     def __init__(self, n_layers=2):

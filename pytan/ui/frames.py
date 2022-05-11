@@ -2,7 +2,7 @@ import tkinter as tk
 import tkutils
 import math
 import functools
-from pytan.core.board import Piece, PieceTypes
+from pytan.core.piece import Piece, PieceTypes
 from pytan.core.state import GameStates
 from pytan.core import hexmesh
 
