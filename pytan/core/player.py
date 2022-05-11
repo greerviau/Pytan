@@ -15,6 +15,9 @@ class Player(object):
         self._vps = 0
         self._knights_played = 0
 
+        self._first_settlement = 0x00
+        self._second_settlement = 0x00
+
     @property
     def name(self):
         return self._name
@@ -67,6 +70,22 @@ class Player(object):
     def knights_played(self):
         return self._knights_played
 
+    @property
+    def first_settlement(self):
+        return self._first_settlement
+
+    @property
+    def second_settlement(self):
+        return self._second_settlement
+
+    @first_settlement.setter 
+    def first_settlement(self, s):
+        self._first_settlement = s
+
+    @second_settlement.setter 
+    def second_settlement(self, s):
+        self._second_settlement = s
+
     def collect_resource_card(self, card):
         self._resource_cards.append(card)
 
@@ -82,7 +101,7 @@ class Player(object):
     def can_buy_dev_card(self):
         return self.are_cards_in_hand([(RESOURCE_CARDS.WHEAT, 1), (RESOURCE_CARDS.SHEEP, 1), (RESOURCE_CARDS.ORE, 1)])
 
-    def collect_dev_card(self, dev_card):
+    def buy_dev_card(self, dev_card):
         if self.can_buy_dev_card():
             self.remove_resource_card(RESOURCE_CARDS.WHEAT)
             self.remove_resource_card(RESOURCE_CARDS.SHEEP)

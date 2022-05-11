@@ -1,8 +1,16 @@
 import tkinter as tk
 import tkutils
 import math
+import functools
 from pytan.core.board import Piece, PieceTypes
+from pytan.core.state import GameStates
 from pytan.core import hexmesh
+
+tk_status = {
+    True: tk.NORMAL,
+    False: tk.DISABLED,
+    None: tk.DISABLED
+}
 
 class BoardFrame(tk.Frame):
     def __init__(self, master, game, *args, **kwargs):
@@ -18,6 +26,25 @@ class BoardFrame(tk.Frame):
 
         self._center_to_edge = math.cos(math.radians(30)) * self._tile_radius
 
+    def piece_click(self, piece_type, event):
+        tags = self._board_canvas.gettags(event.widget.find_closest(event.x, event.y))
+        # avoid processing tile clicks
+        tag = None
+        for t in tags:
+            if 'tile' not in t:
+                tag = t
+                break
+        if tag is not None:
+            if piece_type == PieceTypes.ROAD:
+                self.game.build_road(self._coord_from_road_tag(tag))
+            elif piece_type == PieceTypes.SETTLEMENT:
+                self.game.build_settlement(self._coord_from_settlement_tag(tag))
+            elif piece_type == PieceTypes.CITY:
+                self.game.build_city(self._coord_from_city_tag(tag))
+            elif piece_type == PieceTypes.ROBBER:
+                self.game.move_robber(self._coord_from_robber_tag(tag))
+            self.redraw()
+
     def notify(self, observable):
         self.redraw()
 
@@ -27,17 +54,17 @@ class BoardFrame(tk.Frame):
         self._draw_numbers(board, terrain_centers)
         
         self._draw_pieces(board, terrain_centers)
-        '''
-        if self.game.state.can_place_road():
-            self._draw_piece_shadows(PieceType.road, board, terrain_centers)
-        if self.game.state.can_place_settlement():
-            self._draw_piece_shadows(PieceType.settlement, board, terrain_centers)
-        if self.game.state.can_place_city():
-            self._draw_piece_shadows(PieceType.city, board, terrain_centers)
-        if self.game.state.can_move_robber():
-            self._draw_piece_shadows(PieceType.robber, board, terrain_centers)
+        if self.game.state == GameStates.BUILDING_ROAD:
+            self._draw_piece_shadows(PieceTypes.ROAD, board, terrain_centers)
+        if self.game.state == GameStates.BUILDING_SETTLEMENT:
+            self._draw_piece_shadows(PieceTypes.SETTLEMENT, board, terrain_centers)
+        if self.game.state == GameStates.BUILDING_CITY:
+            self._draw_piece_shadows(PieceTypes.CITY, board, terrain_centers)
+        if self.game.state == GameStates.MOVING_ROBBER:
+            self._draw_piece_shadows(PieceTypes.ROBBER, board, terrain_centers)
 
-        if self.game.state.is_in_game():
+        '''
+        if self.game.state != CatanGameStates.UNDEFINED:
             self._draw_ports(board, terrain_centers)
         else:
             self._draw_port_shadows(board, terrain_centers)
@@ -60,7 +87,7 @@ class BoardFrame(tk.Frame):
             # Calculate the center of this tile as an offset from the center of
             # the neighboring tile in the given direction.
             ref_center = centers[last]
-            direction = hexmesh.direction_to_tile(last - tile_id)
+            direction = hexmesh.direction_to_tile(tile_id, last)
             theta = self._tile_angle_order.index(direction) * 60
             radius = 2 * self._center_to_edge + self._tile_padding
             dx = radius * math.cos(math.radians(theta))
@@ -87,7 +114,8 @@ class BoardFrame(tk.Frame):
         #logging.debug('Drawing numbers')
         for tile_id, (x, y) in terrain_centers.items():
             tile = board.tiles[tile_id]
-            self._draw_number(x, y, tile.prob, tile)
+            if tile.prob != 0:
+                self._draw_number(x, y, tile.prob, tile)
 
     def _draw_number(self, x, y, number, tile):
         # #logging.debug('Drawing number={}, HexNumber={}'.format(number.value, number))
@@ -164,31 +192,23 @@ class BoardFrame(tk.Frame):
 
     def _draw_piece_shadows(self, piece_type, board, terrain_centers):
         #logging.debug('Drawing piece shadows of type={}'.format(piece_type.value))
-        piece = Piece(piece_type, self.game.get_cur_player())
-        if piece_type == PieceType.road:
-            edges = hexgrid.legal_edge_coords()
-            count = 0
+        piece = Piece(0x00, self.game.current_player, piece_type)
+        if piece_type == PieceTypes.ROAD:
+            edges = self.game.legal_road_placements()
             for edge in edges:
-                if (hexgrid.EDGE, edge) in board.pieces:
-                    #logging.debug('Not drawing shadow road at coord={}'.format(edge))
-                    continue
-                count += 1
                 self._draw_piece(edge, piece, terrain_centers, ghost=True)
-            #logging.debug('Road shadows drawn: {}'.format(count))
-        elif piece_type == PieceType.settlement:
-            nodes = hexgrid.legal_node_coords()
+        elif piece_type == PieceTypes.SETTLEMENT:
+            nodes = self.game.legal_settlement_placements()
             for node in nodes:
-                if (hexgrid.NODE, node) in board.pieces:
-                    continue
                 self._draw_piece(node, piece, terrain_centers, ghost=True)
-        elif piece_type == PieceType.city:
-            for (_, node), p in board.pieces.items():
-                if p.type == PieceType.settlement and p.owner.color == piece.owner.color:
-                    self._draw_piece(node, piece, terrain_centers, ghost=True)
-        elif piece_type == PieceType.robber:
-            for coord in hexgrid.legal_tile_coords():
-                if hexgrid.tile_id_from_coord(coord) != self.game.robber_tile:
-                    self._draw_piece(coord, piece, terrain_centers, ghost=True)
+        elif piece_type == PieceTypes.CITY:
+            nodes = self.game.legal_city_placements()
+            for node in nodes:
+                self._draw_piece(node, piece, terrain_centers, ghost=True)
+        elif piece_type == PieceTypes.ROBBER:
+            tiles = self._board.legal_robber_placements()
+            for coord in tiles:
+                self._draw_piece(coord, piece, terrain_centers, ghost=True)
         #else:
             #logging.warning('Attempted to draw piece shadows for nonexistent type={}'.format(piece_type))
 
@@ -204,17 +224,14 @@ class BoardFrame(tk.Frame):
         elif piece.piece_type == PieceTypes.CITY:
             self._draw_city(x, y, coord, piece, ghost=ghost)
             tag = self._city_tag(coord)
-        #elif type(piece) == PieceType.robber:
-        #    self._draw_robber(x, y, coord, piece, ghost=ghost)
-        #    tag = self._robber_tag(coord)
-        #else:
-            #logging.warning('Attempted to draw piece of unknown type={}'.format(piece.type))
+        elif type(piece) == PieceType.robber:
+            self._draw_robber(x, y, coord, piece, ghost=ghost)
+            tag = self._robber_tag(coord)
 
-        #if ghost:
-        #    self._board_canvas.tag_bind(tag, '<ButtonPress-1>',
-        #                                func=functools.partial(self.piece_click, piece.type))
-        #else:
-        #    self._board_canvas.tag_unbind(tag, '<ButtonPress-1>')
+        if ghost:
+            self._board_canvas.tag_bind(tag, '<ButtonPress-1>', func=functools.partial(self.piece_click, piece.piece_type))
+        else:
+            self._board_canvas.tag_unbind(tag, '<ButtonPress-1>')
 
     def _piece_tkinter_opts(self, coord, piece, **kwargs):
         opts = dict()
@@ -237,6 +254,8 @@ class BoardFrame(tk.Frame):
         if 'ghost' in kwargs and kwargs['ghost'] == True:
             opts['fill'] = '' # transparent
             opts['activefill'] = color
+        else:
+            opts['outline'] = 'black'
         del kwargs['ghost']
         opts.update(kwargs)
         return opts
@@ -260,7 +279,7 @@ class BoardFrame(tk.Frame):
 
     def _draw_road(self, x, y, coord, piece, angle, ghost=False):
         opts = self._piece_tkinter_opts(coord, piece, ghost=ghost)
-        length = self._tile_radius * 0.7
+        length = self._tile_radius * 0.8
         height = self._tile_padding * 2.5
         points = [x - length/2, y - height/2] # left top
         points += [x + length/2, y - height/2] # right top
@@ -270,14 +289,13 @@ class BoardFrame(tk.Frame):
         # #logging.debug('Drawing road={} at coord={}, angle={} with opts={}'.format(
         #     piece, coord, angle, opts
         # ))
-        self._board_canvas.create_polygon(*points,
-                                          **opts)
+        self._board_canvas.create_polygon(*points, **opts)
 
     def _draw_settlement(self, x, y, coord, piece, ghost=False):
         opts = self._piece_tkinter_opts(coord, piece, ghost=ghost)
-        width = 18
-        height = 14
-        point_height = 8
+        width = 24
+        height = 19
+        point_height = 10
         points = [x - width/2, y - height/2] # left top
         points += [x, y - height/2 - point_height] # middle point
         points += [x + width/2, y - height/2] # right top
@@ -304,19 +322,14 @@ class BoardFrame(tk.Frame):
         roads = self._board.roads.values()
         settlements = self._board.settlements.values()
         cities = self._board.cities.values()
-        robber = None
+        robber = self._board.robber
         return roads, settlements, cities, robber
 
     def _get_piece_center(self, piece_coord, piece, terrain_centers):
-        """Takes a piece's hex coordinate, the piece itself, and the terrain_centers
-        dictionary which maps tile_id->(x,y)
-        Returns the piece's center, as an (x,y) pair. Also returns the angle the
-        piece should be rotated at, if any
-        """
         if piece.piece_type == PieceTypes.ROAD:
             # these pieces are on edges
-            tile_coord = self._board.get_nearest_tile_to_edge(piece_coord)
-            direction = hexmesh.tile_to_edge_direction(piece_coord - tile_coord)
+            tile_coord = self._board.nearest_tile_to_edge(piece_coord)
+            direction = hexmesh.tile_to_edge_direction(tile_coord, piece_coord)
             terrain_x, terrain_y = terrain_centers[tile_coord]
             angle = 60*self._edge_angle_order.index(direction)
             dx = math.cos(math.radians(angle)) * self.distance_tile_to_edge()
@@ -324,22 +337,16 @@ class BoardFrame(tk.Frame):
             return terrain_x + dx, terrain_y + dy, angle + 90
         elif piece.piece_type in [PieceTypes.SETTLEMENT, PieceTypes.CITY]:
             # these pieces are on nodes
-            tile_coord = self._board.get_nearest_tile_to_node(piece_coord)
-            direction = hexmesh.tile_to_node_direction(piece_coord - tile_coord)
+            tile_coord = self._board.nearest_tile_to_node(piece_coord)
+            direction = hexmesh.tile_to_node_direction(tile_coord, piece_coord)
             terrain_x, terrain_y = terrain_centers[tile_coord]
             angle = 30 + 60*self._node_angle_order.index(direction)
             dx = math.cos(math.radians(angle)) * self._tile_radius
             dy = math.sin(math.radians(angle)) * self._tile_radius
             return terrain_x + dx, terrain_y + dy, 0
-        '''
-        elif piece.type == PieceType.robber:
-            # these pieces are on tiles
-            tile_id = hexgrid.tile_id_from_coord(piece_coord)
-            terrain_x, terrain_y = terrain_centers[tile_id]
+        elif piece.piece_type == PieceTypes.ROBBER:
+            terrain_x, terrain_y = terrain_centers[piece_coord]
             return terrain_x, terrain_y, 0
-        #else:
-            #logging.warning('Unknown piece={}'.format(piece))
-        '''
 
     def _fixup_offset(self):
         offx, offy = self._board_center
@@ -410,7 +417,7 @@ class BoardFrame(tk.Frame):
     _board_center = (300, 300)
     _tile_angle_order = ('E', 'SE', 'SW', 'W', 'NW', 'NE') # 0 + 60*index
     _edge_angle_order = ('E', 'SE', 'SW', 'W', 'NW', 'NE') # 0 + 60*index
-    _node_angle_order = ('SE', 'S', 'SW', 'NE', 'N', 'NE') # 30 + 60*index
+    _node_angle_order = ('SE', 'S', 'SW', 'NW', 'N', 'NE') # 30 + 60*index
     _hex_font     = (('Helvetica'), 22)
     _colors = {
         'WOOD': '#12782D',
@@ -433,57 +440,110 @@ class GameControlsFrame(tk.Frame):
         self._cur_player_name = tk.StringVar()
         self.set_cur_player_name()
 
-        current_player_label = tk.Label(self, textvariable=self._cur_player_name)
-        current_player_label.pack(pady=10)
+        self.current_player_label = tk.Label(self, textvariable=self._cur_player_name)
+        self.current_player_label.pack(pady=10)
 
-        dice_sides_frame = tk.Frame(self)
-        dice_sides_frame.pack(pady=5)
+        self.dice_sides_frame = tk.Frame(self)
+        self.dice_sides_frame.pack(pady=5)
 
-        roll_two_button = tk.Button(dice_sides_frame, text='2')
-        roll_three_button = tk.Button(dice_sides_frame, text='3')
-        roll_four_button = tk.Button(dice_sides_frame, text='4')
-        roll_five_button = tk.Button(dice_sides_frame, text='5')
-        roll_six_button = tk.Button(dice_sides_frame, text='6')
-        roll_seven_button = tk.Button(dice_sides_frame, text='7')
-        roll_eight_button = tk.Button(dice_sides_frame, text='8')
-        roll_nine_button = tk.Button(dice_sides_frame, text='9')
-        roll_ten_button = tk.Button(dice_sides_frame, text='10')
-        roll_eleven_button = tk.Button(dice_sides_frame, text='11')
-        roll_twelve_button = tk.Button(dice_sides_frame, text='12')
+        self.roll_two_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(2), text='2')
+        self.roll_three_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(3), text='3')
+        self.roll_four_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(4), text='4')
+        self.roll_five_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(5), text='5')
+        self.roll_six_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(6), text='6')
+        self.roll_seven_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(7), text='7')
+        self.roll_eight_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(8), text='8')
+        self.roll_nine_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(9), text='9')
+        self.roll_ten_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(10), text='10')
+        self.roll_eleven_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(11), text='11')
+        self.roll_twelve_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(12), text='12')
 
-        roll_two_button.grid(row=0,column=0)
-        roll_three_button.grid(row=0,column=1)
-        roll_four_button.grid(row=0,column=2)
-        roll_five_button.grid(row=0,column=3)
-        roll_six_button.grid(row=0,column=4)
-        roll_seven_button.grid(row=0,column=5)
-        roll_eight_button.grid(row=1,column=0)
-        roll_nine_button.grid(row=1,column=1)
-        roll_ten_button.grid(row=1,column=2)
-        roll_eleven_button.grid(row=1,column=3)
-        roll_twelve_button.grid(row=1,column=4)
+        self.roll_two_button.grid(row=0,column=0)
+        self.roll_three_button.grid(row=0,column=1)
+        self.roll_four_button.grid(row=0,column=2)
+        self.roll_five_button.grid(row=0,column=3)
+        self.roll_six_button.grid(row=0,column=4)
+        self.roll_seven_button.grid(row=0,column=5)
+        self.roll_eight_button.grid(row=1,column=0)
+        self.roll_nine_button.grid(row=1,column=1)
+        self.roll_ten_button.grid(row=1,column=2)
+        self.roll_eleven_button.grid(row=1,column=3)
+        self.roll_twelve_button.grid(row=1,column=4)
 
-        dice_frame = tk.Frame(self)
-        dice_frame.pack(pady=5)
+        self.dice_frame = tk.Frame(self)
+        self.dice_frame.pack(pady=5)
         
-        roll_button = tk.Button(dice_frame, text='Roll Dice')
-        pass_turn_button = tk.Button(dice_frame, text='Pass Turn')
+        self.roll_button = tk.Button(self.dice_frame, command=lambda:self.on_dice_roll(), text='Roll Dice')
+        self.pass_turn_button = tk.Button(self.dice_frame, command=lambda:self.on_pass_turn(), text='Pass Turn')
 
-        roll_button.grid(row=0, column=0)
-        pass_turn_button.grid(row=0, column=1)
+        self.roll_button.grid(row=0, column=0)
+        self.pass_turn_button.grid(row=0, column=1)
 
-        build_frame = tk.LabelFrame(self, text='Build')
-        build_frame.pack(pady=10)
+        self.build_frame = tk.LabelFrame(self, text='Build')
+        self.build_frame.pack(pady=10)
 
-        build_road_button = tk.Button(build_frame, width=10, text='Road')
-        build_settlement_button = tk.Button(build_frame, width=10, text='Settlement')
-        upgrade_city_button = tk.Button(build_frame, width=10, text='City')
-        build_dev_card_button = tk.Button(build_frame, width=10, text='Dev Card')
+        self.build_road_button = tk.Button(self.build_frame, width=10, text='Road')
+        self.build_settlement_button = tk.Button(self.build_frame, width=10, text='Settlement')
+        self.upgrade_city_button = tk.Button(self.build_frame, width=10, text='City')
+        self.buy_dev_card_button = tk.Button(self.build_frame, width=10, text='Dev Card')
 
-        build_road_button.grid(row=0, column=0)
-        build_settlement_button.grid(row=0, column=1)
-        upgrade_city_button.grid(row=1, column=0)
-        build_dev_card_button.grid(row=1, column=1)
+        self.build_road_button.grid(row=0, column=0)
+        self.build_settlement_button.grid(row=0, column=1)
+        self.upgrade_city_button.grid(row=1, column=0)
+        self.buy_dev_card_button.grid(row=1, column=1)
+
+        self.set_states()
+
+    def notify(self, observable):
+        self.set_states()
+
+    def set_states(self):
+        self.roll_two_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_three_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_four_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_five_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_six_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_seven_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_nine_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_ten_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_eleven_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_twelve_button.configure(state=tk_status[self.game.state.can_roll()])
+
+        self.roll_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.pass_turn_button.configure(state=tk_status[self.game.state.can_pass_turn()])
+
+        self.build_road_button.configure(state=tk_status[self.game.state.can_build_road()])
+        self.build_settlement_button.configure(state=tk_status[self.game.state.can_build_settlement()])
+        self.upgrade_city_button.configure(state=tk_status[self.game.state.can_build_city()])
+        self.buy_dev_card_button.configure(state=tk_status[self.game.state.can_buy_dev_card()])
+
+    def on_dice_roll(self):
+        self.game.roll()
+        self.set_states()
+
+    def on_roll(self, roll):
+        self.game.roll(roll)
+        self.set_states()
+
+    def on_pass_turn(self):
+        self.game.pass_turn()
+        self.set_states()
+
+    def on_build_road(self):
+        self.game.state = GameStates.BUILDING_ROAD
+        self.set_states()
+
+    def on_build_settlement(self):
+        self.game.state = GameStates.BUILDING_SETTLEMENT
+        self.set_states()
+
+    def on_build_city(self):
+        self.game.state = GameStates.BUILDING_CITY
+        self.set_states()
+    
+    def on_buy_dev_card(self):
+        self.game.buy_dev_card()
+        self.set_states()
 
     def set_cur_player_name(self):
         self._cur_player = self.game.current_player

@@ -84,19 +84,22 @@ EN_DIRS = {
     'NW': +0x00
 }
 
-def direction_to_tile(offset):
+def direction_to_tile(tile_1_coord: int, tile_2_coord: int):
+    offset = tile_1_coord - tile_2_coord
     for key, value in TT_DIRS.items():
         if value == offset:
             return key
     return None
 
-def tile_to_node_direction(offset):
+def tile_to_node_direction(tile_coord: int, node_coord: int):
+    offset = node_coord - tile_coord
     for key, value in TN_DIRS.items():
         if value == offset:
             return key
     return None
 
-def tile_to_edge_direction(offset):
+def tile_to_edge_direction(tile_coord: int, edge_coord: int):
+    offset = edge_coord - tile_coord
     for key, value in TE_DIRS.items():
         if value == offset:
             return key
@@ -146,6 +149,22 @@ class HexMesh(object):
     @property
     def edges(self):
         return self._edges
+    
+    @property
+    def empty_nodes(self):
+        return [coord for coord, node in self._nodes.items() if node is None]
+
+    @property
+    def empty_edges(self):
+        return [coord for coord, edge in self._edges.items() if edge is None]
+
+    @property
+    def occupied_nodes(self):
+        return {coord: node for coord, node in self._nodes.items() if node is not None}
+
+    @property
+    def occupied_edges(self):
+        return {coord: edge for coord, edge in self._edges.items() if edge is not None}
 
     def hex_digits(self, coord):
         h = hex(coord)
@@ -195,13 +214,13 @@ class HexMesh(object):
         nodes = []
         d1, d2 = self.hex_digits(node_coord)
         if d2 % 2 == 0:
-            node.append(node_coord + NN_DIRS['N'])
-            node.append(node_coord + NN_DIRS['SE'])
-            node.append(node_coord + NN_DIRS['SW'])
+            nodes.append(node_coord + NN_DIRS['N'])
+            nodes.append(node_coord + NN_DIRS['SE'])
+            nodes.append(node_coord + NN_DIRS['SW'])
         else:
-            node.append(node_coord + NN_DIRS['NE'])
-            node.append(node_coord + NN_DIRS['S'])
-            node.append(node_coord + NN_DIRS['NW'])
+            nodes.append(node_coord + NN_DIRS['NE'])
+            nodes.append(node_coord + NN_DIRS['S'])
+            nodes.append(node_coord + NN_DIRS['NW'])
 
         return self.confirm_nodes_exist(nodes)
 
@@ -270,28 +289,30 @@ class HexMesh(object):
 
         return self.confirm_edges_exist(edges)
 
-    def get_nearest_tile_to_node(self, node_coord):
+    def nearest_tile_to_node(self, node_coord):
         tiles = self.node_neighboring_tiles(node_coord)
-        return list(tiles.keys())[0] 
+        tile_coords = list(tiles.keys())
+        return list(self.confirm_tiles_exist(tile_coords).keys())[0] 
 
-    def get_nearest_tile_to_edge(self, edge_coord):
+    def nearest_tile_to_edge(self, edge_coord):
         tiles = self.edge_neighboring_tiles(edge_coord)
-        return list(tiles.keys())[0] 
+        tile_coords = list(tiles.keys())
+        return list(self.confirm_tiles_exist(tile_coords).keys())[0] 
 
     def confirm_tiles_exist(self, tiles):
-        return {tile: self.try_get_value(self._tiles, tile) for tile in tiles}
+        return {tile: self._tiles[tile] for tile in tiles if tile in self._tiles}
 
     def confirm_nodes_exist(self, nodes):
-        return {node: self.try_get_value(self._nodes, node) for node in nodes}
+        return {node: self._nodes[node] for node in nodes if node in self._nodes}
 
     def confirm_edges_exist(self, edges):
-        return {edge: self.try_get_value(self._edges, edge) for edge in edges}
+        return {edge: self._edges[edge] for edge in edges if edge in self._edges}
 
     def try_get_value(self, hmap, key):
         try:
             return hmap[key]
         except KeyError:
-            pass
+            return None
 
     def __repr__(self):
         s = f'Mesh - N_Tiles: {self._n_tiles} - N_Layers: {self._n_layers}\n'
