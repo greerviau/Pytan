@@ -1,4 +1,4 @@
-from pytan.core.cards import RESOURCE_CARDS, DEV_CARDS
+from pytan.core.cards import RESOURCE_CARDS, DEV_CARDS, ROAD, SETTLEMENT, CITY, DEV_CARD
 
 class Player(object):
     def __init__(self, name, identifier, color):
@@ -15,8 +15,9 @@ class Player(object):
         self._vps = 0
         self._knights_played = 0
 
-        self._first_settlement = 0x00
-        self._second_settlement = 0x00
+        self._last_road_built = 0x00
+        self._last_settlement_built = 0x00
+        self._last_city_built = 0x00
 
     @property
     def name(self):
@@ -69,68 +70,72 @@ class Player(object):
     @property
     def knights_played(self):
         return self._knights_played
+        
+    @property
+    def last_road_built(self):
+        return self._last_road_built
 
     @property
-    def first_settlement(self):
-        return self._first_settlement
-
+    def last_settlement_built(self):
+        return self._last_settlement_built
+    
     @property
-    def second_settlement(self):
-        return self._second_settlement
+    def last_city_built(self):
+        return self._last_city_built
 
-    @first_settlement.setter 
-    def first_settlement(self, s):
-        self._first_settlement = s
+    def collect_resource_card(self, card: RESOURCE_CARDS):
+        if card is not None:
+            self._resource_cards.append(card)
 
-    @second_settlement.setter 
-    def second_settlement(self, s):
-        self._second_settlement = s
-
-    def collect_resource_card(self, card):
-        self._resource_cards.append(card)
-
-    def remove_resource_card(self, card):
+    def remove_resource_card(self, card: RESOURCE_CARDS):
         self._resource_cards.remove(card)
 
-    def are_cards_in_hand(self, cards_needed):
-        for card, num in cards_needed:
-            if self._resource_cards.count(card) < num:
+    def remove_resource_cards(self, cards: list[tuple[RESOURCE_CARDS, int]]):
+        for card, n in cards:
+            for i in range(n):
+                self._resource_cards.remove(card)
+
+    def are_cards_in_hand(self, cards_needed: tuple[RESOURCE_CARDS, int]):
+        for card, n in cards_needed:
+            if self._resource_cards.count(card) < n:
                 return False
         return True
 
     def can_buy_dev_card(self):
-        return self.are_cards_in_hand([(RESOURCE_CARDS.WHEAT, 1), (RESOURCE_CARDS.SHEEP, 1), (RESOURCE_CARDS.ORE, 1)])
+        return self.are_cards_in_hand(DEV_CARD)
 
-    def buy_dev_card(self, dev_card):
+    def buy_dev_card(self, dev_card: DEV_CARDS):
         if self.can_buy_dev_card():
-            self.remove_resource_card(RESOURCE_CARDS.WHEAT)
-            self.remove_resource_card(RESOURCE_CARDS.SHEEP)
-            self.remove_resource_card(RESOURCE_CARDS.ORE)
+            self.remove_resource_cards(DEV_CARD)
             self._dev_cards.append(dev_card)
 
-    def remove_dev_card(self, dev_card):
+    def remove_dev_card(self, dev_card: DEV_CARDS):
         card = self.dev_cards.remove(dev_card)
         if dev_card == DEV_CARDS.KNIGHT:
             self._knights_played += 1
 
     def can_buy_road(self):
-        return self.are_cards_in_hand([(RESOURCE_CARDS.WOOD, 1), (RESOURCE_CARDS.BRICK, 1)])
+        return self.are_cards_in_hand(ROAD)
 
-    def add_road(self):
+    def add_road(self, coord: int):
+        self._last_road_built = coord
         self._roads += 1
 
     def can_buy_settlement(self):
-        return self.are_cards_in_hand([(RESOURCE_CARDS.WHEAT, 1), (RESOURCE_CARDS.SHEEP, 1), (RESOURCE_CARDS.WOOD, 1), (RESOURCE_CARDS.BRICK, 1)])
+        return self.are_cards_in_hand(SETTLEMENT)
 
-    def add_settlement(self):
+    def add_settlement(self, coord: int):
+        self._last_settlement_built = coord
         self._settlements += 1
 
     def can_buy_city(self):
-        return self.are_cards_in_hand([(RESOURCE_CARDS.WHEAT, 2), (RESOURCE_CARDS.ORE, 3)])
+        return self.are_cards_in_hand(CITY)
 
-    def add_city(self):
+    def add_city(self, coord: int):
+        self._last_city_built = coord
         self._settlements -= 1
         self._cities += 1
+        self.remove_resource_cards(CITY)
 
     def clone_player(self):
         return Player(self._name, self._identifier, self._color)

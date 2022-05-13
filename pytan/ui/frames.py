@@ -17,6 +17,7 @@ class BoardFrame(tk.Frame):
         super(BoardFrame, self).__init__()
         self.master = master
         self.game = game
+        self.game.add_observer(self)
 
         self._board = game.board
 
@@ -54,13 +55,13 @@ class BoardFrame(tk.Frame):
         self._draw_numbers(board, terrain_centers)
         
         self._draw_pieces(board, terrain_centers)
-        if self.game.state == GameStates.BUILDING_ROAD:
+        if self.game.state.is_building_road():
             self._draw_piece_shadows(PieceTypes.ROAD, board, terrain_centers)
-        if self.game.state == GameStates.BUILDING_SETTLEMENT:
+        if self.game.state.is_building_settlement():
             self._draw_piece_shadows(PieceTypes.SETTLEMENT, board, terrain_centers)
-        if self.game.state == GameStates.BUILDING_CITY:
+        if self.game.state.is_building_city():
             self._draw_piece_shadows(PieceTypes.CITY, board, terrain_centers)
-        if self.game.state == GameStates.MOVING_ROBBER:
+        if self.game.state.is_moving_robber():
             self._draw_piece_shadows(PieceTypes.ROBBER, board, terrain_centers)
 
         '''
@@ -187,11 +188,9 @@ class BoardFrame(tk.Frame):
         for city in cities:
             self._draw_piece(city.coord, city, terrain_centers)
 
-        #coord, robber = robber
-        #self._draw_piece(coord, robber, terrain_centers)
+        self._draw_piece(robber.coord, robber, terrain_centers)
 
     def _draw_piece_shadows(self, piece_type, board, terrain_centers):
-        #logging.debug('Drawing piece shadows of type={}'.format(piece_type.value))
         piece = Piece(0x00, self.game.current_player, piece_type)
         if piece_type == PieceTypes.ROAD:
             edges = self.game.legal_road_placements()
@@ -224,7 +223,7 @@ class BoardFrame(tk.Frame):
         elif piece.piece_type == PieceTypes.CITY:
             self._draw_city(x, y, coord, piece, ghost=ghost)
             tag = self._city_tag(coord)
-        elif type(piece) == PieceType.robber:
+        elif piece.piece_type == PieceTypes.ROBBER:
             self._draw_robber(x, y, coord, piece, ghost=ghost)
             tag = self._robber_tag(coord)
 
@@ -241,12 +240,11 @@ class BoardFrame(tk.Frame):
             PieceTypes.CITY: self._city_tag,
             PieceTypes.ROBBER: self._robber_tag,
         }
-        color = piece.owner.color
-        '''
-        if piece.type == PieceType.robber:
-            # robber has no owner
-            color = 'black'
-        '''
+        color = 'black'
+        try:
+            color = piece.owner.color
+        except:
+            pass
 
         opts['tags'] = tag_funcs[piece.piece_type](coord)
         opts['outline'] = color
@@ -435,6 +433,7 @@ class GameControlsFrame(tk.Frame):
         super(GameControlsFrame, self).__init__()
         self.master = master
         self.game = game
+        self.game.add_observer(self)
 
         self._cur_player = self.game.current_player
         self._cur_player_name = tk.StringVar()
@@ -482,10 +481,10 @@ class GameControlsFrame(tk.Frame):
         self.build_frame = tk.LabelFrame(self, text='Build')
         self.build_frame.pack(pady=10)
 
-        self.build_road_button = tk.Button(self.build_frame, width=10, text='Road')
-        self.build_settlement_button = tk.Button(self.build_frame, width=10, text='Settlement')
-        self.upgrade_city_button = tk.Button(self.build_frame, width=10, text='City')
-        self.buy_dev_card_button = tk.Button(self.build_frame, width=10, text='Dev Card')
+        self.build_road_button = tk.Button(self.build_frame, command=lambda:self.on_build_road(), width=10, text='Road')
+        self.build_settlement_button = tk.Button(self.build_frame, command=lambda:self.on_build_settlement(), width=10, text='Settlement')
+        self.upgrade_city_button = tk.Button(self.build_frame, command=lambda:self.on_build_city(), width=10, text='City')
+        self.buy_dev_card_button = tk.Button(self.build_frame, command=lambda:self.on_buy_dev_card(), width=10, text='Dev Card')
 
         self.build_road_button.grid(row=0, column=0)
         self.build_settlement_button.grid(row=0, column=1)
@@ -496,6 +495,7 @@ class GameControlsFrame(tk.Frame):
 
     def notify(self, observable):
         self.set_states()
+        self.set_cur_player_name()
 
     def set_states(self):
         self.roll_two_button.configure(state=tk_status[self.game.state.can_roll()])
@@ -504,6 +504,7 @@ class GameControlsFrame(tk.Frame):
         self.roll_five_button.configure(state=tk_status[self.game.state.can_roll()])
         self.roll_six_button.configure(state=tk_status[self.game.state.can_roll()])
         self.roll_seven_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_eight_button.configure(state=tk_status[self.game.state.can_roll()])
         self.roll_nine_button.configure(state=tk_status[self.game.state.can_roll()])
         self.roll_ten_button.configure(state=tk_status[self.game.state.can_roll()])
         self.roll_eleven_button.configure(state=tk_status[self.game.state.can_roll()])
@@ -530,15 +531,15 @@ class GameControlsFrame(tk.Frame):
         self.set_states()
 
     def on_build_road(self):
-        self.game.state = GameStates.BUILDING_ROAD
+        self.game.start_building(PieceTypes.ROAD)
         self.set_states()
 
     def on_build_settlement(self):
-        self.game.state = GameStates.BUILDING_SETTLEMENT
+        self.game.start_building(PieceTypes.SETTLEMENT)
         self.set_states()
 
     def on_build_city(self):
-        self.game.state = GameStates.BUILDING_CITY
+        self.game.start_building(PieceTypes.CITY)
         self.set_states()
     
     def on_buy_dev_card(self):

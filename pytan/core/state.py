@@ -28,32 +28,41 @@ class CatanGameState(object):
         return self._state == other
 
     def can_build_road(self):
-        if self._state == GameStates.STARTING_ROAD:
-            return True
-        elif self._state == GameStates.INGAME:
-            if self.game.current_player.can_buy_road():
-                return True
-        return False
+        return self._state == GameStates.INGAME \
+                and not self.can_roll() \
+                and self._game.current_player.can_buy_road() \
+                and self._game.current_player.roads_left > 0 \
+                and any(self._game.legal_road_placements())
 
     def can_build_settlement(self):
-        if self._state == GameStates.STARTING_SETTLEMENT:
-            return True
-        elif self._state == GameStates.INGAME:
-            if self.game.current_player.can_buy_settlement():
-                return True
-        return False
+        return self._state == GameStates.INGAME \
+                and not self.can_roll() \
+                and self._game.current_player.can_buy_settlement() \
+                and self._game.current_player.settlements_left > 0 \
+                and any(self._game.legal_settlement_placements())
 
     def can_build_city(self):
-        if self._state == GameStates.INGAME:
-            if self.game.current_player.can_buy_city():
-                return True
-        return False
+        return self._state == GameStates.INGAME  \
+                and not self.can_roll() \
+                and self._game.current_player.can_buy_city() \
+                and self._game.current_player.cities_left > 0 \
+                and self._game.current_player.settlements > 0 \
+                and any(self._game.legal_city_placements())
+    
+    def is_building_road(self):
+        return self._state in [GameStates.STARTING_ROAD, GameStates.BUILDING_ROAD]
+
+    def is_building_settlement(self):
+        return self._state in [GameStates.STARTING_SETTLEMENT, GameStates.BUILDING_SETTLEMENT]
+    
+    def is_building_city(self):
+        return self._state == GameStates.BUILDING_CITY
 
     def can_roll(self):
-        return True
+        return self._state == GameStates.INGAME and not self._game.has_rolled
 
     def can_pass_turn(self):
-        return False
+        return self._state == GameStates.INGAME and self._game.has_rolled
 
     def can_trade(self):
         return False
@@ -61,5 +70,5 @@ class CatanGameState(object):
     def can_buy_dev_card(self):
         return False
 
-    def can_move_robber(self):
+    def is_moving_robber(self):
         return False

@@ -150,9 +150,33 @@ class Board(HexMesh):
             if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT:
                 settlements[node_coord] = node
         return settlements
+    
+    def cities_on_tile(self, tile_coord: int):
+        cities = {}
+        for node_coord in self.tile_neighboring_nodes(tile_coord):
+            node = self._nodes[node_coord]
+            if type(node) == Piece and node.piece_type == PieceTypes.CITY:
+                cities[node_coord] = node
+        return cities
+    
+    def friendly_roads(self, player_id: int):
+        return {coord: edge for coord, edge in self.occupied_edges.items() if type(edge) == Piece and edge.owner_id == player_id}
 
-    def player_settlements(self, player_id: int):
-        return {coord: node for coord, node in self._nodes.items() if type(node) == Piece and node.owner == player_id}
+    def friendly_settlements(self, player_id: int):
+        return {coord: node for coord, node in self.occupied_nodes.items() if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT and node.owner_id == player_id}
+ 
+    def friendly_cities(self, player_id: int):
+        return {coord: node for coord, node in self.occupied_nodes.items() if type(node) == Piece and node.piece_type == PieceTypes.CITY and node.owner_id == player_id}
+
+    def friendly_pieces(self, player_id: int) -> list[Piece]:
+        pieces = []
+        for edge in self.friendly_roads(player_id).values():
+            pieces.append(edge)
+        for node in self.friendly_settlements(player_id).values():
+            pieces.append(edge)
+        for node in self.friendly_cities(player_id).values():
+            pieces.append(edge)
+        return pieces
 
     def settlement_neighboring_settlement(self, node_coord: int):
         neighbor_nodes = self.node_neighboring_nodes(node_coord)
@@ -168,33 +192,34 @@ class Board(HexMesh):
                 return True
         return False
 
-    def road_neighboring_friendly_settlement(self, edge_coord: int, player_id: int):
+    def road_neighboring_friendly_piece(self, edge_coord: int, player_id: int):
         neighbor_nodes = self.edge_neighboring_nodes(edge_coord)
-        for coord, node in neighbor_nodes.items():
-            if type(node) == Piece and node.owner_id == player_id:
-                return True
-        return False
-
-    def road_neighboring_friendly_road(self, edge_coord: int, player_id: int):
         neighbor_edges = self.edge_neighboring_edges(edge_coord)
-        for coord, edge in neighbor_edges.items():
-            if type(edge) == Piece and edge.owner_id == player_id:
+        for node, edge in zip(neighbor_nodes.values(), neighbor_edges.values()):
+            if (type(node) == Piece and node.owner_id == player_id) or (type(edge) == Piece and edge.owner_id == player_id):
                 return True
         return False
-
-    def legal_starting_road_placements(self, player_id: int):
-        legal_road_placements = []
-        for coord in self.empty_edges:
-            if self.road_neighboring_friendly_settlement(coord, player_id):
-                legal_road_placements.append(coord)
-        return legal_road_placements
 
     def legal_road_placements(self, player_id: int):
         legal_road_placements = []
-        for coord in self.empty_edges:
-            if self.road_neighboring_friendly_road(coord, player_id) or self.road_neighboring_friendly_settlement(coord, player_id):
-                legal_road_placements.append(coord)
+        for piece in self.friendly_pieces(player_id):
+            edges = []
+            if piece.piece_type == PieceTypes.ROAD:
+                edges = self.edge_neighboring_edges(piece.coord)
+            else:
+                edges = self.node_neighboring_edges(piece.coord)
+            for coord, edge in edges.items():
+                if edge == None:
+                    legal_road_placements.append(coord)
         return legal_road_placements
+        '''
+        for coord in self.empty_edges:
+            if self.road_neighboring_friendly_piece(coord, player_id):
+                legal_road_placements.append(coord)
+        print(len(legal_road_placements))
+        print(legal_road_placements)
+        return legal_road_placements
+        '''
 
     def legal_starting_settlement_placements(self, player_id: int):
         legal_settlement_placements = []
@@ -209,6 +234,13 @@ class Board(HexMesh):
             if not self.settlement_neighboring_settlement(coord) and self.settlement_neighboring_friendly_road(coord, player_id):
                 legal_settlement_placements.append(coord)
         return legal_settlement_placements
+
+    def legal_city_placements(self, player_id: int):
+        legal_city_placements = []
+        for coord, node in self.occupied_nodes.items():
+            if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT and node.owner_id == player_id:
+                legal_city_placements.append(coord)
+        return legal_city_placements
 
     def build_road(self, edge_coord: int, player: Player):
         edge = self._edges[edge_coord]
@@ -226,7 +258,7 @@ class Board(HexMesh):
             return settlement
         return None
     
-    def upgrade_to_city(self, node_coord: int, player: Player):
+    def build_city(self, node_coord: int, player: Player):
         node = self._nodes[node_coord]
         if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT:
             if node.owner_id == player.identifier:

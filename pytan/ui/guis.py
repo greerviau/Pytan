@@ -10,7 +10,6 @@ class CatanGUI(tk.Frame):
         super(CatanGUI, self).__init__()
 
         self.game = Game()
-        self.game.start_game()
 
         self._board_frame = BoardFrame(self, self.game)
         self._controls_frame = GameControlsFrame(self, self.game)
@@ -19,6 +18,8 @@ class CatanGUI(tk.Frame):
         self._controls_frame.grid(row=0, column=1, sticky=tk.NW)
 
         self._board_frame.redraw()
+
+        self.game.start_game()
 
 if __name__ == '__main__':
         
