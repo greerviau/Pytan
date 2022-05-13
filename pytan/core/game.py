@@ -187,20 +187,29 @@ class Game(object):
         self._current_roll = dice_roll
         self.log(f'{self._current_player} rolled a {dice_roll}')
         tiles = self._board.tiles_with_prob(dice_roll)
+        pickups = {}
         for tile_coord, tile in tiles.items():
             card = TILE_TYPES_TO_RESOURCE[tile.tile_type]
-            settlements = self._board.settlements_on_tile(tile_coord)
-            for settlement_coord, settlement in settlements.items():
-                player = self.get_player_by_id(settlement.owner_id)
-                self.log(f'{player} picked up a {card.value}')
-                player.collect_resource_card(card)
+            if not card in pickups.keys():
+                pickup[card] = {}
+            for settlement in self._board.settlements_on_tile(tile_coord).values():
+                p_id = settlement.owner_id
+                if p_id not in pickups[card].keys():
+                    pickups[card][p_id] = 1
+                else:
+                    pickups[card][p_id] += 1
             
-            cities = self._board.cities_on_tile(tile_coord)
-            for city_coord, city in cities.items():
-                player = self.get_player_by_id(city.owner_id)
-                self.log(f'{player} picked up 2 {card.value}')
-                player.collect_resource_card(card)
-                player.collect_resource_card(card)
+            for city in self._board.cities_on_tile(tile_coord).values():
+                p_id = city.owner_id
+                if p_id not in pickups[card].keys():
+                    pickups[card][p_id] = 2
+                else:
+                    pickups[card][p_id] += 2
+        for card, players in pickups.items():
+            for p_id, count in players.items():
+                player = self.get_player_by_id(p_id)
+                self.log(f'{player} picked up {count} {card.value}')
+                player.collect_resource_cards(card, count)
                 
         self.notify()
 

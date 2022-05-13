@@ -83,9 +83,10 @@ class Player(object):
     def last_city_built(self):
         return self._last_city_built
 
-    def collect_resource_card(self, card: RESOURCE_CARDS):
+    def collect_resource_cards(self, card: RESOURCE_CARDS, count=1):
         if card is not None:
-            self._resource_cards.append(card)
+            for i in range(count):
+                self._resource_cards.append(card)
 
     def remove_resource_card(self, card: RESOURCE_CARDS):
         self._resource_cards.remove(card)

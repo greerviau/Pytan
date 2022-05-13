@@ -200,11 +200,19 @@ class Board(HexMesh):
                 return True
         return False
 
+    def road_neighboring_enemy_settlement(self, edge_coord: int, player_id: int):
+        for node in self.edge_neighboring_nodes(edge_coord).values():
+            if type(node) == Piece and node.owner_id != player_id:
+                return True
+        return False
+
     def legal_road_placements(self, player_id: int):
         legal_road_placements = []
         for piece in self.friendly_pieces(player_id):
             edges = []
             if piece.piece_type == PieceTypes.ROAD:
+                if self.road_neighboring_enemy_settlement(piece.coord, player_id):
+                    continue
                 edges = self.edge_neighboring_edges(piece.coord)
             else:
                 edges = self.node_neighboring_edges(piece.coord)
