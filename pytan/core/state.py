@@ -9,7 +9,8 @@ class GameStates(Enum):
     BUILDING_SETTLEMENT = 'BUILDING_SETTLEMENT'
     BUILDING_CITY = 'BUILDING_CITY'
     TRADING = 'TRADING'
-    MOVING_ROBBER = 'PLACING_ROBBER'
+    MOVING_ROBBER = 'MOVING_ROBBER'
+    STEALING = 'STEALING'
 
 class CatanGameState(object):
     def __init__(self, game):
@@ -28,6 +29,7 @@ class CatanGameState(object):
 
     def can_build_road(self):
         return self._state == GameStates.INGAME \
+                or self._state == GameStates.BUILDING_ROAD \
                 and not self.can_roll() \
                 and self._game.current_player.can_buy_road() \
                 and self._game.current_player.roads_left > 0 \
@@ -35,13 +37,15 @@ class CatanGameState(object):
 
     def can_build_settlement(self):
         return self._state == GameStates.INGAME \
+                or self._state == GameStates.BUILDING_SETTLEMENT \
                 and not self.can_roll() \
                 and self._game.current_player.can_buy_settlement() \
                 and self._game.current_player.settlements_left > 0 \
                 and any(self._game.legal_settlement_placements())
 
     def can_build_city(self):
-        return self._state == GameStates.INGAME  \
+        return self._state == GameStates.INGAME \
+                or self._state == GameStates.BUILDING_CITY \
                 and not self.can_roll() \
                 and self._game.current_player.can_buy_city() \
                 and self._game.current_player.cities_left > 0 \
@@ -73,4 +77,7 @@ class CatanGameState(object):
         and self._game.current_player.can_buy_dev_card()
 
     def is_moving_robber(self):
-        return False
+        return self._state == GameStates.MOVING_ROBBER
+
+    def __repr__(self):
+        return self._state.value

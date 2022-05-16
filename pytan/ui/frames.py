@@ -123,8 +123,6 @@ class BoardFrame(tk.Frame):
             self._board_canvas.create_oval(tkutils.circle_bbox(2, (p_x, p_y)), fill='black', tags=self._tile_tag(tile))
             p_x += 5
 
-
-
     def _draw_ports(self, board, terrain_centers, ports=None, ghost=False):
         if ports is None:
             ports = board.ports
@@ -221,12 +219,15 @@ class BoardFrame(tk.Frame):
             pass
 
         opts['tags'] = tag_funcs[piece.piece_type](coord)
-        opts['outline'] = color
-        opts['fill'] = color
         if 'ghost' in kwargs and kwargs['ghost'] == True:
             opts['fill'] = '' # transparent
             opts['activefill'] = color
+            opts['outline'] = color
+            if piece.piece_type == PieceTypes.ROBBER:
+                opts['outline'] = 'black'
+                opts['activefill'] = 'gray'
         else:
+            opts['fill'] = color
             opts['outline'] = 'black'
         del kwargs['ghost']
         opts.update(kwargs)
@@ -288,8 +289,7 @@ class BoardFrame(tk.Frame):
     def _draw_robber(self, x, y, coord, piece, ghost=False):
         opts = self._piece_tkinter_opts(coord, piece, ghost=ghost)
         radius = 10
-        self._board_canvas.create_oval(x-radius, y-radius, x+radius, y+radius,
-                                       **opts)
+        self._board_canvas.create_oval(x-radius, y-radius, x+radius, y+radius, **opts)
 
     def _get_pieces(self, board):
         roads = self._board.roads.values()
@@ -411,7 +411,7 @@ class GameControlsFrame(tk.Frame):
         
         self.player_labels = [tk.Label(self, textvariable=player) for player in self._players]
         for pl in self.player_labels:
-            pl.pack(padx=20, anchor='w')
+            pl.pack(anchor='w')
         
         self.set_player_labels()
 

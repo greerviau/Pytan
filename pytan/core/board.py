@@ -173,7 +173,7 @@ class Board(hexmesh.HexMesh):
         return self._robber
 
     def legal_robber_placements(self):
-        return [coord for coord, tile in self._tiles if coord != self._robber.coord]
+        return [coord for coord, tile in self._tiles.items() if coord != self._robber.coord]
 
     def move_robber(self, coord: int):
         self._robber = Piece(coord, None, PieceTypes.ROBBER)
