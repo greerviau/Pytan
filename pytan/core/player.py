@@ -1,4 +1,4 @@
-from pytan.core.cards import RESOURCE_CARDS, DEV_CARDS, ROAD, SETTLEMENT, CITY, DEV_CARD
+from pytan.core.cards import ResourceCards, DevCards, ROAD, SETTLEMENT, CITY, DEV_CARD
 
 class Player(object):
     def __init__(self, name, identifier, color):
@@ -83,36 +83,42 @@ class Player(object):
     def last_city_built(self):
         return self._last_city_built
 
-    def collect_resource_cards(self, card: RESOURCE_CARDS, count=1):
-        if card is not None:
-            for i in range(count):
+    def count_resource_cards(self, card: ResourceCards):
+        return self._resource_cards.count(card)
+
+    def collect_resource_cards(self, cards: list[tuple[ResourceCards, int]]):
+        for card, n in cards:
+            for _ in range(n):
                 self._resource_cards.append(card)
 
-    def remove_resource_card(self, card: RESOURCE_CARDS):
+    def remove_resource_card(self, card: ResourceCards):
         self._resource_cards.remove(card)
 
-    def remove_resource_cards(self, cards: list[tuple[RESOURCE_CARDS, int]]):
+    def remove_resource_cards(self, cards: list[tuple[ResourceCards, int]]):
         for card, n in cards:
-            for i in range(n):
+            for _ in range(n):
                 self._resource_cards.remove(card)
 
-    def are_cards_in_hand(self, cards_needed: tuple[RESOURCE_CARDS, int]):
+    def are_cards_in_hand(self, cards_needed: tuple[ResourceCards, int]):
         for card, n in cards_needed:
             if self._resource_cards.count(card) < n:
                 return False
         return True
 
+    def count_dev_cards(self, card: DevCards):
+        return self._dev_cards.count(card)
+
     def can_buy_dev_card(self):
         return self.are_cards_in_hand(DEV_CARD)
 
-    def buy_dev_card(self, dev_card: DEV_CARDS):
+    def buy_dev_card(self):
         if self.can_buy_dev_card():
             self.remove_resource_cards(DEV_CARD)
             self._dev_cards.append(dev_card)
 
-    def remove_dev_card(self, dev_card: DEV_CARDS):
-        card = self.dev_cards.remove(dev_card)
-        if dev_card == DEV_CARDS.KNIGHT:
+    def remove_dev_card(self, dev_card: DevCards):
+        card = self.DevCards.remove(dev_card)
+        if dev_card == DevCards.KNIGHT:
             self._knights_played += 1
 
     def can_buy_road(self):
@@ -136,7 +142,6 @@ class Player(object):
         self._last_city_built = coord
         self._settlements -= 1
         self._cities += 1
-        self.remove_resource_cards(CITY)
 
     def clone_player(self):
         return Player(self._name, self._identifier, self._color)

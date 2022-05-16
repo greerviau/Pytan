@@ -1,4 +1,4 @@
-from pytan.core.board import Board, TILE_TYPES
+from pytan.core.board import Board, CatanTile, TileTypes
 from pytan.core.piece import PieceTypes
 from pytan.core.player import Player
 from pytan.core.cards import *
@@ -9,12 +9,12 @@ import copy
 import os
 
 TILE_TYPES_TO_RESOURCE = {  
-    TILE_TYPES.WHEAT: RESOURCE_CARDS.WHEAT,
-    TILE_TYPES.WOOD: RESOURCE_CARDS.WOOD,
-    TILE_TYPES.SHEEP: RESOURCE_CARDS.SHEEP,
-    TILE_TYPES.ORE: RESOURCE_CARDS.ORE,
-    TILE_TYPES.BRICK: RESOURCE_CARDS.BRICK,
-    TILE_TYPES.DESERT: None
+    TileTypes.WHEAT: ResourceCards.WHEAT,
+    TileTypes.WOOD: ResourceCards.WOOD,
+    TileTypes.SHEEP: ResourceCards.SHEEP,
+    TileTypes.ORE: ResourceCards.ORE,
+    TileTypes.BRICK: ResourceCards.BRICK,
+    TileTypes.DESERT: None
 }
 
 class Game(object):
@@ -42,10 +42,14 @@ class Game(object):
         self._players = [p.clone_player() for p in self._players]
 
         self._game_state = CatanGameState(self)
-        self._game_state.state = GameStates.UNDEFINED
+        self._game_state.set_state(GameStates.UNDEFINED)
 
         self._resource_card_counts = copy.copy(RESOURCE_CARD_COUNTS)
-        self._dev_card_counts = copy.copy(DEV_CARD_COUNTS)
+        self._dev_cards = []
+        for card in DEV_CARD_COUNTS:
+            for _ in range(DEV_CARD_COUNTS[card]):
+                self._dev_cards.append(card)
+        random.shuffle(self._dev_cards)
 
         self._current_player_idx = random.randint(0,len(self._players)-1)
         self._current_player = self._players[self._current_player_idx]
@@ -113,8 +117,8 @@ class Game(object):
         return self._resource_card_counts
 
     @property
-    def dev_card_counts(self):
-        return self._dev_card_counts
+    def dev_cards(self):
+        return self._dev_cards
 
     @property
     def current_player(self):
@@ -150,7 +154,7 @@ class Game(object):
 
     @state.setter
     def state(self, s: GameStates):
-        self._game_state.state = s
+        self._game_state.set_state(s)
     
     def start_game(self):
         self.reset()
@@ -164,7 +168,7 @@ class Game(object):
         self.state = GameStates.STARTING_SETTLEMENT
         self.notify()
 
-    def end_game(self, log=True):
+    def end_game(self, log=False):
         self.log('Ending Game')
         if log:
             self.save_to_log_file()
@@ -174,6 +178,46 @@ class Game(object):
         for player in self._players:
             if player.identifier == player_id:
                 return player
+
+    def _remove_resources(self, resource_list: list[tuple[ResourceCards, int]]):
+        for card, n in resource_list:
+            self._resource_card_counts[card] -= n
+
+    def _add_resources(self, resource_list: list[tuple[ResourceCards, int]]):
+        for card, n in resource_list:
+            self._resource_card_counts[card] += n
+
+    def _collect_resources(self, tiles: dict[int, CatanTile], node_coord=0x00):
+        pickups = {}
+        for tile_coord, tile in tiles.items():
+            card = TILE_TYPES_TO_RESOURCE[tile.tile_type]
+            if card is not None:
+                for s_coord, settlement in self._board.settlements_on_tile(tile_coord).items():
+                    if node_coord == 0 or node_coord == s_coord:
+                        p_id = settlement.owner_id
+                        if p_id not in pickups.keys():
+                            pickups[p_id] = {}
+                        if card not in pickups[p_id].keys():
+                            pickups[p_id][card] = 0
+                        pickups[p_id][card] += 1
+                
+                for c_coord, city in self._board.cities_on_tile(tile_coord).items():
+                    if node_coord == 0 or node_coord == s_coord:
+                        p_id = city.owner_id
+                        if p_id not in pickups.keys():
+                            pickups[p_id] = {}
+                        if card not in pickups[p_id].keys():
+                            pickups[p_id][card] = 0
+                        pickups[p_id][card] += 2
+
+        for p_id, cards in pickups.items():
+            pickup_list = []
+            player = self.get_player_by_id(p_id)
+            for card, count in cards.items():
+                self.log(f'{player} picked up {count} {card.value}')
+                pickup_list.append((card,count))
+            player.collect_resource_cards(pickup_list)
+            self._remove_resources(pickup_list)
 
     def roll(self, dice_roll=0):
         self._has_rolled = True
@@ -187,29 +231,7 @@ class Game(object):
         self._current_roll = dice_roll
         self.log(f'{self._current_player} rolled a {dice_roll}')
         tiles = self._board.tiles_with_prob(dice_roll)
-        pickups = {}
-        for tile_coord, tile in tiles.items():
-            card = TILE_TYPES_TO_RESOURCE[tile.tile_type]
-            if not card in pickups.keys():
-                pickup[card] = {}
-            for settlement in self._board.settlements_on_tile(tile_coord).values():
-                p_id = settlement.owner_id
-                if p_id not in pickups[card].keys():
-                    pickups[card][p_id] = 1
-                else:
-                    pickups[card][p_id] += 1
-            
-            for city in self._board.cities_on_tile(tile_coord).values():
-                p_id = city.owner_id
-                if p_id not in pickups[card].keys():
-                    pickups[card][p_id] = 2
-                else:
-                    pickups[card][p_id] += 2
-        for card, players in pickups.items():
-            for p_id, count in players.items():
-                player = self.get_player_by_id(p_id)
-                self.log(f'{player} picked up {count} {card.value}')
-                player.collect_resource_cards(card, count)
+        self._collect_resources(tiles)
                 
         self.notify()
 
@@ -222,7 +244,7 @@ class Game(object):
         elif self._turns >= 5 and self._turns < 8:
             d = -1
         if self._turns >= 8:
-            self._game_state.state = GameStates.INGAME
+            self._game_state.set_state(GameStates.INGAME)
         self._current_player_idx += d
         if self._current_player_idx >= len(self._players):
             self._current_player_idx = 0
@@ -234,11 +256,11 @@ class Game(object):
 
     def start_building(self, piece_type: PieceTypes):
         if piece_type == PieceTypes.ROAD:
-            self._game_state.state = GameStates.BUILDING_ROAD
+            self._game_state.set_state(GameStates.BUILDING_ROAD)
         elif piece_type == PieceTypes.SETTLEMENT:
-            self._game_state.state = GameStates.BUILDING_SETTLEMENT
+            self._game_state.set_state(GameStates.BUILDING_SETTLEMENT)
         elif piece_type == PieceTypes.CITY:
-            self._game_state.state = GameStates.BUILDING_CITY
+            self._game_state.set_state(GameStates.BUILDING_CITY)
         self.notify()
 
     def legal_road_placements(self):
@@ -262,14 +284,15 @@ class Game(object):
     def build_road(self, coord: int):
         if self._game_state == GameStates.STARTING_ROAD:
             self._build_road(coord)
-            self._game_state.state = GameStates.STARTING_SETTLEMENT
+            self._game_state.set_state(GameStates.STARTING_SETTLEMENT)
             self.pass_turn()
         elif self._game_state != GameStates.UNDEFINED:
             if self._current_player.roads_left > 0:
                 if self._current_player.can_buy_road():
                     self._build_road(coord)
-                    self._game_state.state = GameStates.INGAME
+                    self._game_state.set_state(GameStates.INGAME)
                     self._current_player.remove_resource_cards(ROAD)
+                    self._add_resources(ROAD)
             else:
                 self.log(f'{self._current_player} has no roads left')
         else:
@@ -299,18 +322,16 @@ class Game(object):
             self._build_settlement(coord)
             if self._current_player.settlements == 2:
                 tiles = self._board.node_neighboring_tiles(self._current_player.last_settlement_built)
-                for coord, tile in tiles.items():
-                    card = TILE_TYPES_TO_RESOURCE[tile.tile_type]
-                    if card is not None:
-                        self._current_player.collect_resource_card(card)
-                        self.log(f'{self._current_player} picked up a {card.value}')
-            self._game_state.state = GameStates.STARTING_ROAD
+                self._collect_resources(tiles, coord)
+                self._remove_resources(SETTLEMENT)
+            self._game_state.set_state(GameStates.STARTING_ROAD)
         elif self._game_state != GameStates.UNDEFINED:
             if self._current_player.settlements_left > 0:
                 if self._current_player.can_buy_settlement():
                     self._build_settlement(coord)
-                    self._game_state.state = GameStates.INGAME
+                    self._game_state.set_state(GameStates.INGAME)
                     self._current_player.remove_resource_cards(SETTLEMENT)
+                    self._add_resources(SETTLEMENT)
                 else:
                     self.log(f'{self._current_player} cannot afford settlement')
             else:
@@ -337,7 +358,9 @@ class Game(object):
                 if self._current_player.can_buy_city():
                     if coord in self.legal_city_placements():
                         self._build_city(coord)
-                        self._game_state.state = GameStates.INGAME
+                        self._game_state.set_state(GameStates.INGAME)
+                        self._current_player.remove_resource_cards(CITY)
+                        self._add_resources(CITY)
                     else:
                         self.log(f'{self._current_player} cannot upgrade city at {hex(coord)}')
                 else:
@@ -351,10 +374,14 @@ class Game(object):
     def buy_dev_card(self):
         if self._game_state != GameStates.UNDEFINED:
             if self._current_player.can_buy_dev_card():
-                self._current_player.buy_dev_card()
-                self.log(f'{self._current_player.buy_dev_card} bought a dev card')
+                if len(self._dev_cards) > 0:
+                    card = self._dev_cards.pop(0)
+                    self._current_player.buy_dev_card(card)
+                    self.log(f'{self._current_player.buy_dev_card} bought a {card.value} Dev Card')
+                else:
+                    self.log('No Dev Cards left')
             else:
-                self.log(f'{self._current_player.buy_dev_card} could not afford a dev card')
+                self.log(f'{self._current_player.buy_dev_card} could not afford a Dev Card')
         else:
             self.log('Game has not started')
         self.notify()

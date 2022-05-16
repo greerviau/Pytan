@@ -3,6 +3,8 @@ from collections import Counter
 import numpy as np
 import copy
 
+DIRECTIONS = ['NE', 'E', 'SE', 'SW', 'W', 'NW']
+
 TT_DIRS = {
     'NE': +0x02,
     'E': +0x22,
@@ -85,7 +87,7 @@ EN_DIRS = {
 }
 
 def direction_to_tile(tile_1_coord: int, tile_2_coord: int):
-    offset = tile_1_coord - tile_2_coord
+    offset = tile_2_coord - tile_1_coord
     for key, value in TT_DIRS.items():
         if value == offset:
             return key
@@ -104,6 +106,16 @@ def tile_to_edge_direction(tile_coord: int, edge_coord: int):
         if value == offset:
             return key
     return None
+
+def node_in_direction(tile_coord: int, direction: str):
+    if direction not in DIRECTIONS:
+        return None
+    return tile_coord + TN_DIRS[direction]
+
+def edge_in_direction(tile_coord: int, direction: str):
+    if direction not in DIRECTIONS:
+        return None
+    return tile_coord + TE_DIRS[direction]
     
 class HexMesh(object):
     def __init__(self, n_layers=0):
@@ -165,6 +177,11 @@ class HexMesh(object):
     @property
     def occupied_edges(self):
         return {coord: edge for coord, edge in self._edges.items() if edge is not None}
+
+    @property
+    def edge_tiles(self):
+        n = self._n_layers * 6
+        return {k: self._tiles[k] for k in list(reversed(list(self._tiles.keys())[-n:]))}
 
     def hex_digits(self, coord: int):
         h = hex(coord).replace('0x', '')

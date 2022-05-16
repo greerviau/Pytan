@@ -1,11 +1,13 @@
-from pytan.core.hexmesh import HexMesh
+from pytan.core import hexmesh
 from pytan.core.player import Player
 from pytan.core.piece import PieceTypes, Piece
+from pytan.core.cards import ResourceCards
+from pytan.core.trading import PortTypes, Port, PORT_TYPE_COUNTS
 from enum import Enum
 import copy
 import random
 
-class TILE_TYPES(Enum):
+class TileTypes(Enum):
     WHEAT = 'WHEAT'
     WOOD = 'WOOD'
     SHEEP = 'SHEEP'
@@ -14,12 +16,12 @@ class TILE_TYPES(Enum):
     DESERT = 'DESERT'
 
 TILE_COUNTS = {
-    'WHEAT': 4,
-    'WOOD': 4,
-    'SHEEP': 4,
-    'ORE': 3,
-    'BRICK': 3,
-    'DESERT': 1
+    TileTypes.WHEAT: 4,
+    TileTypes.WOOD: 4,
+    TileTypes.SHEEP: 4,
+    TileTypes.ORE: 3,
+    TileTypes.BRICK: 3,
+    TileTypes.DESERT: 1
 }
 
 PROB_COUNTS = {
@@ -35,11 +37,26 @@ PROB_COUNTS = {
     12: 2
 }
 
+PROB_TO_PROD = {
+    2: 1,
+    3: 2,
+    4: 3,
+    5: 4,
+    6: 5,
+    7: 0,
+    8: 5,
+    9: 4,
+    10: 3,
+    11: 2,
+    12: 1
+}
+
 class CatanTile(object):
     def __init__(self, coord, prob, tile_type):
         self._coord = coord
         self._prob = prob 
         self._tile_type = tile_type
+        self._prod_points = PROB_TO_PROD[prob]
 
     @property
     def coord(self):
@@ -50,55 +67,34 @@ class CatanTile(object):
         return self._prob
 
     @property
+    def prod_points(self):
+        return self._prod_points
+
+    @property
     def tile_type(self):
         return self._tile_type
 
     def __repr__(self):
         return f'<Tile Type: {self._tile_type} - Coord: {hex(self._coord)} - Prob: {self._prob}>'
 
-class Port(object):
-    def __init__(self, coord_1, coord_2, tile, direction, port_type):
-        self._coord_1 = coord_1
-        self._coord_2 = coord_2
-        self._tile = tile
-        self._direction = direction
-        self._port_type = port_type
-
-    @property
-    def coord_1(self):
-        return self._coord_1
-    
-    @property
-    def coord_2(self):
-        return self._coord_2
-    
-    @property
-    def tile(self):
-        return self._tile
-
-    @property
-    def port_type(self):
-        return self._port_type
-    
-    def __repr__(self):
-        return f'<Port Type: {self._port_type} - Coords: {hex(self._coord_1)}:{hex(self._coord_2)} - Tile: {self._tile}>'
-
-class Board(HexMesh):
-    def __init__(self, n_layers=2):
-        super().__init__(n_layers = n_layers)
+class Board(hexmesh.HexMesh):
+    def __init__(self):
+        super().__init__(n_layers = 2)
         self.reset()
         
     def reset(self):
-        # Init board state
+        self.setup_tiles()
+        self.setup_ports()
+
+    def setup_tiles(self):
         self._robber = None
         
         available_tiles = []
         available_probs = []
 
-        for tile_type in TILE_TYPES:
-            tile_id = tile_type.value
-            for _ in range(TILE_COUNTS[tile_id]):
-                available_tiles.append(tile_type)
+        for tile in TILE_COUNTS:
+            for _ in range(TILE_COUNTS[tile]):
+                available_tiles.append(tile)
 
         for prob in PROB_COUNTS:
             for _ in range(PROB_COUNTS[prob]):
@@ -109,14 +105,52 @@ class Board(HexMesh):
             available_tiles.remove(tile_choice)
             tile_type = tile_choice
             
-            prob = 0
-            if tile_type != TILE_TYPES.DESERT:
+            prob = 7
+            if tile_type != TileTypes.DESERT:
                 prob = random.choice(available_probs)
                 available_probs.remove(prob)
             else:
                 self._robber = Piece(coord, None, PieceTypes.ROBBER)
 
             self._tiles[coord] = CatanTile(coord, prob, tile_type)
+
+    def setup_ports(self, rotate=0):
+        self._ports = {}
+        edge_tiles = list(self.edge_tiles.keys())
+        for i in range(rotate):
+            edge_tiles.append(edge_tiles.pop(0))
+
+        available_ports = []
+        for port_type in PORT_TYPE_COUNTS:
+            for _ in range(PORT_TYPE_COUNTS[port_type]):
+                available_ports.append(port_type)
+        
+        directions = ['NE', 'E', 'SE', 'SW', 'W', 'NW']
+        dir_to_tile = hexmesh.direction_to_tile(edge_tiles[0], edge_tiles[1])
+        i = directions.index(dir_to_tile) - 2
+        j = 2
+        for tile in edge_tiles:
+            if j % 4 != 0:
+                port_dir = directions[i]
+                if (j+1) % 4 != 0:
+                    i += 1
+                    if i > len(directions) - 1:
+                        i = 0
+                edge = hexmesh.edge_in_direction(tile, port_dir)
+                node1, node2 = tuple(self.edge_neighboring_nodes(edge).keys())
+                port_type = random.choice(available_ports)
+                available_ports.remove(port_type)
+                self._ports[tile] = Port(node1, node2, tile, port_dir, port_type)
+
+            j += 1
+
+    def get_port_at(self, tile_coord: int, direction: str):
+        for port in self._ports:
+            if port.tile == tile_coord and port.direction == direction:
+                return port
+        port = Port(tile_coord, direction, PortTypes.NONE)
+        self.ports.append(port)
+        return port
 
     @property
     def roads(self):
@@ -129,6 +163,10 @@ class Board(HexMesh):
     @property
     def cities(self):
         return {coord: node for coord, node in self._nodes.items() if type(node) == Piece and node.piece_type == PieceTypes.CITY}
+
+    @property
+    def ports(self):
+        return self._ports
 
     @property
     def robber(self):
@@ -220,14 +258,6 @@ class Board(HexMesh):
                 if edge == None:
                     legal_road_placements.append(coord)
         return legal_road_placements
-        '''
-        for coord in self.empty_edges:
-            if self.road_neighboring_friendly_piece(coord, player_id):
-                legal_road_placements.append(coord)
-        print(len(legal_road_placements))
-        print(legal_road_placements)
-        return legal_road_placements
-        '''
 
     def legal_starting_settlement_placements(self, player_id: int):
         legal_settlement_placements = []

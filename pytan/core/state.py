@@ -19,13 +19,12 @@ class CatanGameState(object):
     @property
     def state(self):
         return self._state
-    
-    @state.setter
-    def state(self, s: GameStates):
-        self._state = s
 
     def __eq__(self, other):
         return self._state == other
+
+    def set_state(self, s: GameStates):
+        self._state = s
 
     def can_build_road(self):
         return self._state == GameStates.INGAME \
@@ -68,7 +67,10 @@ class CatanGameState(object):
         return False
 
     def can_buy_dev_card(self):
-        return False
+        return self._state == GameStates.INGAME \
+        and len(self._game.dev_cards) > 0 \
+        and not self.can_roll() \
+        and self._game.current_player.can_buy_dev_card()
 
     def is_moving_robber(self):
         return False

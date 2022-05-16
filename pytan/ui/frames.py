@@ -5,6 +5,7 @@ import functools
 from pytan.core.piece import Piece, PieceTypes
 from pytan.core.state import GameStates
 from pytan.core import hexmesh
+from pytan.core.cards import ResourceCards, DevCards
 
 tk_status = {
     True: tk.NORMAL,
@@ -13,8 +14,8 @@ tk_status = {
 }
 
 class BoardFrame(tk.Frame):
-    def __init__(self, master, game, *args, **kwargs):
-        super(BoardFrame, self).__init__()
+    def __init__(self, master, game):
+        super().__init__()
         self.master = master
         self.game = game
         self.game.add_observer(self)
@@ -22,7 +23,7 @@ class BoardFrame(tk.Frame):
         self._board = game.board
 
         
-        self._board_canvas = tk.Canvas(self, height=600, width=600, bg='Royal Blue')
+        self._board_canvas = tk.Canvas(self, height=600, width=600, bg='#24AAFA')
         self._board_canvas.pack(expand=tk.YES, fill=tk.BOTH)
 
         self._center_to_edge = math.cos(math.radians(30)) * self._tile_radius
@@ -54,6 +55,9 @@ class BoardFrame(tk.Frame):
         
         self._draw_numbers(board, terrain_centers)
         
+        if self.game.state != GameStates.UNDEFINED:
+            self._draw_ports(board, terrain_centers)    
+        
         self._draw_pieces(board, terrain_centers)
         if self.game.state.is_building_road():
             self._draw_piece_shadows(PieceTypes.ROAD, board, terrain_centers)
@@ -62,21 +66,13 @@ class BoardFrame(tk.Frame):
         if self.game.state.is_building_city():
             self._draw_piece_shadows(PieceTypes.CITY, board, terrain_centers)
         if self.game.state.is_moving_robber():
-            self._draw_piece_shadows(PieceTypes.ROBBER, board, terrain_centers)
-
-        '''
-        if self.game.state != CatanGameStates.UNDEFINED:
-            self._draw_ports(board, terrain_centers)
-        else:
-            self._draw_port_shadows(board, terrain_centers)
-        '''
+            self._draw_piece_shadows(PieceTypes.ROBBER, board, terrain_centers) 
 
     def redraw(self):
         self._board_canvas.delete(tk.ALL)
         self.draw(self._board)
 
     def _draw_terrain(self, board):
-        #logging.debug('Drawing terrain (resource tiles)')
         centers = {}
         last = None
         for tile_id in board.tiles:
@@ -88,7 +84,7 @@ class BoardFrame(tk.Frame):
             # Calculate the center of this tile as an offset from the center of
             # the neighboring tile in the given direction.
             ref_center = centers[last]
-            direction = hexmesh.direction_to_tile(tile_id, last)
+            direction = hexmesh.direction_to_tile(last, tile_id)
             theta = self._tile_angle_order.index(direction) * 60
             radius = 2 * self._center_to_edge + self._tile_padding
             dx = radius * math.cos(math.radians(theta))
@@ -96,11 +92,9 @@ class BoardFrame(tk.Frame):
             centers[tile_id] = (ref_center[0] + dx, ref_center[1] + dy)
             last = tile_id
 
-        #centers = self._fixup_terrain_centers(centers)
         for tile_id, (x, y) in centers.items():
             tile = board.tiles[tile_id]
             self._draw_tile(x, y, tile.tile_type, tile)
-            #self._board_canvas.tag_bind(self._tile_tag(tile), '<ButtonPress-1>', func=self.tile_click)
 
         return dict(centers)
 
@@ -109,78 +103,60 @@ class BoardFrame(tk.Frame):
 
     def _draw_hexagon(self, radius, offset=(0, 0), rotate=30, fill='black', tags=None):
         points = self._hex_points(radius, offset, rotate)
-        self._board_canvas.create_polygon(*points, fill=fill, tags=tags)
+        self._board_canvas.create_polygon(*points, fill=fill, outline='black', tags=tags)
 
     def _draw_numbers(self, board, terrain_centers):
-        #logging.debug('Drawing numbers')
         for tile_id, (x, y) in terrain_centers.items():
             tile = board.tiles[tile_id]
-            if tile.prob != 0:
+            if tile.prob != 7:
                 self._draw_number(x, y, tile.prob, tile)
 
     def _draw_number(self, x, y, number, tile):
-        # #logging.debug('Drawing number={}, HexNumber={}'.format(number.value, number))
         color = 'red' if number in (6, 8) else 'black'
-        self._board_canvas.create_oval(tkutils.circle_bbox(25, (x, y)), fill='white', tags=self._tile_tag(tile))
-        self._board_canvas.create_oval(tkutils.circle_bbox(25, (x, y)), outline='black', tags=self._tile_tag(tile))
-        self._board_canvas.create_text(x, y, text=str(number), font=self._hex_font, fill=color, tags=self._tile_tag(tile))
+        self._board_canvas.create_oval(tkutils.circle_bbox(24, (x, y)), fill='white', outline='black', tags=self._tile_tag(tile))
+        self._board_canvas.create_text(x, y-3, text=str(number), font=self._hex_font, fill=color, tags=self._tile_tag(tile))
+        prod = tile.prod_points
+        p_w = (prod*3) + ((prod-1)*2)
+        p_x = x - (p_w/2)
+        p_y = y+10
+        for _ in range(prod):
+            self._board_canvas.create_oval(tkutils.circle_bbox(2, (p_x, p_y)), fill='black', tags=self._tile_tag(tile))
+            p_x += 5
+
 
 
     def _draw_ports(self, board, terrain_centers, ports=None, ghost=False):
         if ports is None:
             ports = board.ports
-        #logging.debug('Drawing ports')
-        #logging.debug('ports={}'.format(ports))
         port_centers = []
-        for port in ports:
-            tile_x, tile_y = terrain_centers[port.tile_id]
+        for port in ports.values():
+            tile_x, tile_y = terrain_centers[port.tile]
             theta = self._tile_angle_order.index(port.direction) * 60
             radius = 2 * self._center_to_edge + self._tile_padding
             dx = radius * math.cos(math.radians(theta))
             dy = radius * math.sin(math.radians(theta))
-            ##logging.debug('tile_id={}, port={}, x+dx={}+{}, y+dy={}+{}'.format(tile_id, port, tile_x, dx, tile_y, dy))
             port_centers.append((tile_x + dx, tile_y + dy, theta))
 
         port_centers = self._fixup_port_centers(port_centers)
-        for (x, y, angle), port in zip(port_centers, ports):
-            # #logging.debug('Drawing port={} at ({},{})'.format(port, x, y))
+        for (x, y, angle), port in zip(port_centers, ports.values()):
             self._draw_port(x, y, angle, port, ghost=ghost)
 
-    def _draw_port_shadows(self, board, terrain_centers):
-        coastal_coords = hexgrid.coastal_coords()
-        ports = list(map(lambda cc: board.get_port_at(*cc), coastal_coords))
-        self._draw_ports(board, terrain_centers, ports=ports, ghost=True)
-
-
     def _draw_port(self, x, y, angle, port, ghost=False):
-        """
-        Draw the given port.
-        Currently, draws a equilateral triangle with the top point at x, y and the
-        bottom facing the direction given by the angle.
-        :param x: int
-        :param y: int
-        :param angle: ccw from E, in degrees
-        :param port: Port
-        """
         opts = self._port_tkinter_opts(port, ghost=ghost)
         points = [x, y]
         for adjust in (-30, 30):
             x1 = x + math.cos(math.radians(angle + adjust)) * self._tile_radius
             y1 = y + math.sin(math.radians(angle + adjust)) * self._tile_radius
             points.extend([x1, y1])
-        self._board_canvas.create_polygon(*points,
-                                          **opts)
-        if port.type != PortType.none:
-            self._board_canvas.create_text(x, y, text=port.type.value, font=self._hex_font)
-        self._board_canvas.tag_bind(self._port_tag(port), '<ButtonPress-1>',
-                                    functools.partial(self.port_click, port))
+        self._board_canvas.create_polygon(*points, **opts)
+        self._board_canvas.create_text(x, y, text=port.port_type.value, fill='black', font=self._hex_font)
+        #self._board_canvas.tag_bind(self._port_tag(port), '<ButtonPress-1>', functools.partial(self.port_click, port))
 
     def _draw_pieces(self, board, terrain_centers):
         roads, settlements, cities, robber = self._get_pieces(board)
 
         for road in roads:
             self._draw_piece(road.coord, road, terrain_centers)
-        #logging.debug('Roads drawn: {}'.format(len(roads)))
 
         for settlement in settlements:
             self._draw_piece(settlement.coord, settlement, terrain_centers)
@@ -208,8 +184,6 @@ class BoardFrame(tk.Frame):
             tiles = self._board.legal_robber_placements()
             for coord in tiles:
                 self._draw_piece(coord, piece, terrain_centers, ghost=True)
-        #else:
-            #logging.warning('Attempted to draw piece shadows for nonexistent type={}'.format(piece_type))
 
     def _draw_piece(self, coord, piece, terrain_centers, ghost=False):
         x, y, angle = self._get_piece_center(coord, piece, terrain_centers)
@@ -260,13 +234,13 @@ class BoardFrame(tk.Frame):
 
     def _port_tkinter_opts(self, port, **kwargs):
         opts = dict()
-        color = self._colors[port.type]
-        next_color = self._colors[PortType.next_ui(port.type)]
+        color = self._colors[port.port_type.value]
+        next_color = self._colors[port.port_type.value]
 
         ghost = 'ghost' in kwargs and kwargs['ghost'] == True
 
         opts['tags'] = self._port_tag(port)
-        opts['outline'] = color
+        opts['outline'] = 'black'
         opts['fill'] = color
         if ghost:
             opts['activefill'] = next_color
@@ -278,34 +252,38 @@ class BoardFrame(tk.Frame):
     def _draw_road(self, x, y, coord, piece, angle, ghost=False):
         opts = self._piece_tkinter_opts(coord, piece, ghost=ghost)
         length = self._tile_radius * 0.8
-        height = self._tile_padding * 2.5
+        height = length // 4
         points = [x - length/2, y - height/2] # left top
         points += [x + length/2, y - height/2] # right top
         points += [x + length/2, y + height/2] # right bottom
         points += [x - length/2, y + height/2] # left bottom
         points = tkutils.rotate_2poly(angle, points, (x, y))
-        # #logging.debug('Drawing road={} at coord={}, angle={} with opts={}'.format(
-        #     piece, coord, angle, opts
-        # ))
         self._board_canvas.create_polygon(*points, **opts)
 
     def _draw_settlement(self, x, y, coord, piece, ghost=False):
         opts = self._piece_tkinter_opts(coord, piece, ghost=ghost)
-        width = 24
-        height = 19
-        point_height = 10
-        points = [x - width/2, y - height/2] # left top
-        points += [x, y - height/2 - point_height] # middle point
-        points += [x + width/2, y - height/2] # right top
+        width = 26
+        height = 30
+        points = [x - width/2, y - height/6] # left top
+        points += [x, y - height/2 - 2] # middle point
+        points += [x + width/2, y - height/6] # right top
         points += [x + width/2, y + height/2] # right bottom
         points += [x - width/2, y + height/2] # left bottom
-        self._board_canvas.create_polygon(*points,
-                                          **opts)
+        self._board_canvas.create_polygon(*points, **opts)
 
     def _draw_city(self, x, y, coord, piece, ghost=False):
         opts = self._piece_tkinter_opts(coord, piece, ghost=ghost)
-        self._board_canvas.create_rectangle(x-20, y-20, x+20, y+20,
-                                            **opts)
+        y -= 2
+        width = 40
+        height = 40
+        points = [x - width/2, y - height/4] # left top
+        points += [x - width/4, y - height/2] # point
+        points += [x, y - height/4] # middle top
+        points += [x, y] # middle
+        points += [x + width/2, y] # right middle
+        points += [x + width/2, y + height/2] # right bottom
+        points += [x - width/2, y + height/2] # left bottom
+        self._board_canvas.create_polygon(*points, **opts)
 
     def _draw_robber(self, x, y, coord, piece, ghost=False):
         opts = self._piece_tkinter_opts(coord, piece, ghost=ghost)
@@ -314,9 +292,6 @@ class BoardFrame(tk.Frame):
                                        **opts)
 
     def _get_pieces(self, board):
-        """Returns roads, settlements, and cities on the board as lists of (coord, piece) tuples.
-        Also returns the robber as a single (coord, piece) tuple.
-        """
         roads = self._board.roads.values()
         settlements = self._board.settlements.values()
         cities = self._board.cities.values()
@@ -388,7 +363,7 @@ class BoardFrame(tk.Frame):
         return 'robber_' + hex(coord)
 
     def _port_tag(self, port):
-        return 'port_{:02}_{}'.format(port.tile_id, port.direction)
+        return 'port_{:02}_{}'.format(port.tile, port.direction)
 
     def _tile_id_from_tag(self, tag):
         return int(tag[len('tile_'):])
@@ -405,42 +380,40 @@ class BoardFrame(tk.Frame):
     def _coord_from_robber_tag(self, tag):
         return int(tag[len('robber_0x'):], 16)
 
-    def _tile_and_direction_from_port_tag(self, tag):
-        tile_id = int(tag[len('port_'):len('port_')+2])
-        direction = tag[len('port_##_'):]
-        return tile_id, direction
 
-    _tile_radius  = 60
-    _tile_padding = 3
+    _tile_radius  = 50
+    _tile_padding = 0
     _board_center = (300, 300)
     _tile_angle_order = ('E', 'SE', 'SW', 'W', 'NW', 'NE') # 0 + 60*index
     _edge_angle_order = ('E', 'SE', 'SW', 'W', 'NW', 'NE') # 0 + 60*index
     _node_angle_order = ('SE', 'S', 'SW', 'NW', 'N', 'NE') # 30 + 60*index
-    _hex_font     = (('Helvetica'), 22)
+    _hex_font     = (('Helvetica'), 18)
     _colors = {
-        'WOOD': '#12782D',
-        'BRICK': '#D14728',
-        'WHEAT': '#FFFF63',
-        'SHEEP': '#AEFA66',
+        'WOOD': '#3AA123',
+        'BRICK': '#E06C05',
+        'WHEAT': '#FFE32D',
+        'SHEEP': '#A8FF31',
         'ORE': '#8A8A8A',
-        'DESERT': 'white',
-        'ANY': 'white',
+        'DESERT': '#DBB135',
+        '3:1': 'white',
         'NONE': '', # transparent
     }
 
 class GameControlsFrame(tk.Frame):
-    def __init__(self, master, game, *args, **kwargs):
-        super(GameControlsFrame, self).__init__()
+    def __init__(self, master, game):
+        super().__init__()
         self.master = master
         self.game = game
         self.game.add_observer(self)
 
+        self._players = [tk.StringVar() for _ in self.game.players]
         self._cur_player = self.game.current_player
-        self._cur_player_name = tk.StringVar()
-        self.set_cur_player_name()
-
-        self.current_player_label = tk.Label(self, textvariable=self._cur_player_name)
-        self.current_player_label.pack(pady=10)
+        
+        self.player_labels = [tk.Label(self, textvariable=player) for player in self._players]
+        for pl in self.player_labels:
+            pl.pack(padx=20, anchor='w')
+        
+        self.set_player_labels()
 
         self.dice_sides_frame = tk.Frame(self)
         self.dice_sides_frame.pack(pady=5)
@@ -495,7 +468,7 @@ class GameControlsFrame(tk.Frame):
 
     def notify(self, observable):
         self.set_states()
-        self.set_cur_player_name()
+        self.set_player_labels()
 
     def set_states(self):
         self.roll_two_button.configure(state=tk_status[self.game.state.can_roll()])
@@ -546,6 +519,31 @@ class GameControlsFrame(tk.Frame):
         self.game.buy_dev_card()
         self.set_states()
 
-    def set_cur_player_name(self):
+    def set_player_labels(self):
         self._cur_player = self.game.current_player
-        self._cur_player_name.set(f'Current Player: {self._cur_player}')
+        #self._players = [tk.StringVar() for _ in self.game.players]
+        for pl, player_s, player in zip(self.player_labels, self._players, self.game.players):
+            s = ''
+            if player.identifier == self._cur_player.identifier:
+                pl.config(fg='red')
+            else:
+                pl.config(fg='white')
+            s += str(player)
+            for card in ResourceCards:
+                n = player.count_resource_cards(card)
+                if n > 0:
+                    s += ' '
+                    abrv = card.value[:2]
+                    if n > 1:
+                        s += f'{n}x'
+                    s += f'{abrv}'
+            if any(player.dev_cards):
+                s += ' |'
+            for card in DevCards:
+                n = player.count_dev_cards(card)
+                if n > 0:
+                    s += ' '
+                    if n > 1:
+                        s += f'{n}x'
+                    s += f'{card.value}'
+            player_s.set(s)
