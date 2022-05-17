@@ -18,7 +18,7 @@ catan.build_settlement(0x67)
 catan.build_road(0x67)
 ...
 catan.pass_turn()
-catan.roll() # catan_game.roll(6)
+catan.roll()
 ...
 catan.roll(7)
 catan.discard([('WHEAT',2), ('WOOD',1), ('ORE',3)])
