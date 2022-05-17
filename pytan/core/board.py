@@ -1,4 +1,5 @@
 from pytan.core import hexmesh
+from pytan.core.hexmesh import Directions
 from pytan.core.player import Player
 from pytan.core.piece import PieceTypes, Piece
 from pytan.core.cards import ResourceCards
@@ -124,8 +125,9 @@ class Board(hexmesh.HexMesh):
         for port_type in PORT_TYPE_COUNTS:
             for _ in range(PORT_TYPE_COUNTS[port_type]):
                 available_ports.append(port_type)
+
+        directions = [Directions.NE, Directions.E, Directions.SE, Directions.SW, Directions.W, Directions.NW]
         
-        directions = ['NE', 'E', 'SE', 'SW', 'W', 'NW']
         dir_to_tile = hexmesh.direction_to_tile(edge_tiles[0], edge_tiles[1])
         i = directions.index(dir_to_tile) - 2
         j = 2

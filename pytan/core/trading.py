@@ -1,4 +1,5 @@
 from enum import Enum
+from pytan.core.hexmesh import Directions
 from pytan.core.cards import ResourceCards
 
 class PortTypes(Enum):
@@ -28,7 +29,7 @@ PORT_TYPE_COUNTS = {
 }
 
 class Port(object):
-    def __init__(self, coord_1: int, coord_2: int, tile: int, direction: str, port_type: PortTypes):
+    def __init__(self, coord_1: int, coord_2: int, tile: int, direction: Directions, port_type: PortTypes):
         self._coord_1 = coord_1
         self._coord_2 = coord_2
         self._tile = tile
@@ -51,7 +52,7 @@ class Port(object):
         return self._tile
 
     @property
-    def direction(self) -> str:
+    def direction(self) -> Directions:
         return self._direction
 
     @property

@@ -3,7 +3,15 @@ from collections import Counter
 import numpy as np
 import copy
 
-DIRECTIONS = ['NE', 'E', 'SE', 'SW', 'W', 'NW']
+class Directions(Enum):
+    N = 'N'
+    NE = 'NE'
+    E = 'E'
+    SE = 'SE'
+    S = 'S'
+    SW = 'SW'
+    W = 'W'
+    NW = 'NW'
 
 TT_DIRS = {
     'NE': +0x02,
@@ -86,36 +94,32 @@ EN_DIRS = {
     'NW': +0x00
 }
 
-def direction_to_tile(tile_1_coord: int, tile_2_coord: int):
+def direction_to_tile(tile_1_coord: int, tile_2_coord: int) -> Directions:
     offset = tile_2_coord - tile_1_coord
     for key, value in TT_DIRS.items():
         if value == offset:
-            return key
+            return Directions(key)
     return None
 
-def tile_to_node_direction(tile_coord: int, node_coord: int):
+def tile_to_node_direction(tile_coord: int, node_coord: int) -> Directions:
     offset = node_coord - tile_coord
     for key, value in TN_DIRS.items():
         if value == offset:
-            return key
+            return Directions(key)
     return None
 
-def tile_to_edge_direction(tile_coord: int, edge_coord: int):
+def tile_to_edge_direction(tile_coord: int, edge_coord: int) -> Directions:
     offset = edge_coord - tile_coord
     for key, value in TE_DIRS.items():
         if value == offset:
-            return key
+            return Directions(key)
     return None
 
-def node_in_direction(tile_coord: int, direction: str):
-    if direction not in DIRECTIONS:
-        return None
-    return tile_coord + TN_DIRS[direction]
+def node_in_direction(tile_coord: int, direction: Directions) -> int:
+    return tile_coord + TN_DIRS[direction.value]
 
-def edge_in_direction(tile_coord: int, direction: str):
-    if direction not in DIRECTIONS:
-        return None
-    return tile_coord + TE_DIRS[direction]
+def edge_in_direction(tile_coord: int, direction: Directions) -> int:
+    return tile_coord + TE_DIRS[direction.value]
     
 class HexMesh(object):
     def __init__(self, n_layers=0):

@@ -5,6 +5,7 @@ import functools
 from pytan.core.piece import Piece, PieceTypes
 from pytan.core.state import GameStates
 from pytan.core import hexmesh
+from pytan.core.hexmesh import Directions
 from pytan.core.cards import ResourceCards, DevCards
 
 tk_status = {
@@ -348,25 +349,25 @@ class BoardFrame(tk.Frame):
         return self._tile_radius * math.cos(math.radians(30)) + 1/2*self._tile_padding
 
     def _tile_tag(self, tile):
-        return 'tile_' + str(tile.coord)
+        return f'tile_{hex(tile.coord)}'
 
     def _road_tag(self, coord):
-        return 'road_' + hex(coord)
+        return f'road_{hex(coord)}'
 
     def _settlement_tag(self, coord):
-        return 'settlement_' + hex(coord)
+        return f'settlement_{hex(coord)}'
 
     def _city_tag(self, coord):
-        return 'city_' + hex(coord)
+        return f'city_{hex(coord)}'
 
     def _robber_tag(self, coord):
-        return 'robber_' + hex(coord)
+        return f'robber_{hex(coord)}'
 
     def _port_tag(self, port):
-        return 'port_{:02}_{}'.format(port.tile, port.direction)
+        return f'port_{hex(port.tile)}'
 
     def _tile_id_from_tag(self, tag):
-        return int(tag[len('tile_'):])
+        return int(tag[len('tile_0x'):], 16)
 
     def _coord_from_road_tag(self, tag):
         return int(tag[len('road_0x'):], 16)
@@ -380,13 +381,12 @@ class BoardFrame(tk.Frame):
     def _coord_from_robber_tag(self, tag):
         return int(tag[len('robber_0x'):], 16)
 
-
     _tile_radius  = 50
     _tile_padding = 0
     _board_center = (300, 300)
-    _tile_angle_order = ('E', 'SE', 'SW', 'W', 'NW', 'NE') # 0 + 60*index
-    _edge_angle_order = ('E', 'SE', 'SW', 'W', 'NW', 'NE') # 0 + 60*index
-    _node_angle_order = ('SE', 'S', 'SW', 'NW', 'N', 'NE') # 30 + 60*index
+    _tile_angle_order = (Directions.E, Directions.SE, Directions.SW, Directions.W, Directions.NW, Directions.NE) # 0 + 60*index
+    _edge_angle_order = (Directions.E, Directions.SE, Directions.SW, Directions.W, Directions.NW, Directions.NE) # 0 + 60*index
+    _node_angle_order = (Directions.SE, Directions.S, Directions.SW, Directions.NW, Directions.N, Directions.NE) # 30 + 60*index
     _hex_font = (('Helvetica'), 18)
     _colors = {
         'WOOD': '#3AA123',

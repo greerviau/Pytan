@@ -1,5 +1,5 @@
 from pytan.core.board import Board, CatanTile, TileTypes
-from pytan.core.piece import PieceTypes
+from pytan.core.piece import Piece, PieceTypes
 from pytan.core.player import Player
 from pytan.core.cards import *
 from pytan.core.state import GameStates, CatanGameState
@@ -335,7 +335,7 @@ class Game(object):
     def build_road(self, coord: int):
         if self._game_state == GameStates.STARTING_ROAD:
             road = self._build_road(coord)
-            if road is not None
+            if road is not None:
                 self._game_state.set_state(GameStates.STARTING_SETTLEMENT)
                 self.pass_turn()
         elif self._game_state.can_build_road(log=True):
@@ -370,10 +370,11 @@ class Game(object):
     def build_settlement(self, coord: int):
         if self._game_state == GameStates.STARTING_SETTLEMENT:
             settlement = self._build_settlement(coord)
-            if settlement is not None and self._current_player.settlements == 2:
-                tiles = self._board.node_neighboring_tiles(self._current_player.last_settlement_built)
-                self._collect_resources(tiles, coord)
-                self._remove_resources(SETTLEMENT)
+            if settlement is not None:
+                if self._current_player.settlements == 2:
+                    tiles = self._board.node_neighboring_tiles(self._current_player.last_settlement_built)
+                    self._collect_resources(tiles, coord)
+                    self._remove_resources(SETTLEMENT)
                 self._game_state.set_state(GameStates.STARTING_ROAD)
         elif self._game_state.can_build_settlement(log=True):
             settlement = self._build_settlement(coord)
