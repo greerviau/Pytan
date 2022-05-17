@@ -5,7 +5,6 @@ from pytan.core.cards import *
 from pytan.core.state import GameStates, CatanGameState
 import random
 from datetime import datetime
-import copy
 import os
 
 TILE_TYPES_TO_RESOURCE = {  
@@ -44,7 +43,7 @@ class Game(object):
         self._game_state = CatanGameState(self)
         self._game_state.set_state(GameStates.UNDEFINED)
 
-        self._resource_card_counts = copy.copy(RESOURCE_CARD_COUNTS)
+        self._resource_card_counts = RESOURCE_CARD_COUNTS.copy()
         self._dev_cards = []
         for card in DEV_CARD_COUNTS:
             for _ in range(DEV_CARD_COUNTS[card]):

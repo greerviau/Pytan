@@ -5,7 +5,6 @@ from pytan.core.piece import PieceTypes, Piece
 from pytan.core.cards import ResourceCards
 from pytan.core.trading import PortTypes, Port, PORT_TYPE_COUNTS
 from enum import Enum
-import copy
 import random
 
 class TileTypes(Enum):

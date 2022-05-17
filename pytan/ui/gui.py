@@ -1,6 +1,4 @@
 import tkinter as tk
-from constants import *
-from pytan.core.board import Board
 from pytan.core.game import Game
 from frames import BoardFrame, GameControlsFrame
 
