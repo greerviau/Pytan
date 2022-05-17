@@ -36,8 +36,16 @@ class Player(object):
         return self._resource_cards
 
     @property
+    def n_resource_cards(self):
+        return len(self._resource_cards)
+
+    @property
     def dev_cards(self):
         return self._dev_cards
+
+    @property
+    def n_dev_cards(self):
+        return len(self._dev_cards)
 
     @property
     def roads(self):
