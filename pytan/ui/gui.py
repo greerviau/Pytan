@@ -1,6 +1,6 @@
 import tkinter as tk
 from pytan.core.game import Game
-from frames import BoardFrame, GameControlsFrame
+from pytan.ui.frames import BoardFrame, GameControlsFrame
 
 
 class CatanGUI(tk.Frame):
