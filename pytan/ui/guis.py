@@ -6,20 +6,20 @@ from frames import BoardFrame, GameControlsFrame
 
 
 class CatanGUI(tk.Frame):
-    def __init__(self, options=None, *args, **kwargs):
-        super(CatanGUI, self).__init__()
+    def __init__(self):
+        super().__init__()
 
-        self.game = Game()
+        game = Game()
 
-        self._board_frame = BoardFrame(self, self.game)
-        self._controls_frame = GameControlsFrame(self, self.game)
+        board_frame = BoardFrame(self, game)
+        controls_frame = GameControlsFrame(self, game)
 
-        self._board_frame.grid(row=0, column=0, sticky=tk.NSEW)
-        self._controls_frame.grid(row=0, column=1, sticky=tk.NW)
+        board_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        controls_frame.grid(row=0, column=1, sticky=tk.NW)
 
-        self._board_frame.redraw()
+        board_frame.redraw()
 
-        self.game.start_game()
+        game.start_game()
 
 if __name__ == '__main__':
         

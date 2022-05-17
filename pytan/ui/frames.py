@@ -387,7 +387,7 @@ class BoardFrame(tk.Frame):
     _tile_angle_order = ('E', 'SE', 'SW', 'W', 'NW', 'NE') # 0 + 60*index
     _edge_angle_order = ('E', 'SE', 'SW', 'W', 'NW', 'NE') # 0 + 60*index
     _node_angle_order = ('SE', 'S', 'SW', 'NW', 'N', 'NE') # 30 + 60*index
-    _hex_font     = (('Helvetica'), 18)
+    _hex_font = (('Helvetica'), 18)
     _colors = {
         'WOOD': '#3AA123',
         'BRICK': '#E06C05',
@@ -403,6 +403,22 @@ class GameControlsFrame(tk.Frame):
     def __init__(self, master, game):
         super().__init__()
         self.master = master
+        
+        player_label_frame = PlayerLabelFrame(self, game)
+        dice_sides_frame = DiceSidesFrame(self, game)
+        action_frame = ActionFrame(self, game)
+        build_frame = BuildFrame(self, game, text='Build')
+
+        player_label_frame.pack(pady=5, anchor='w')
+        dice_sides_frame.pack(pady=5)
+        action_frame.pack(pady=5)
+        build_frame.pack(pady=5)
+
+class PlayerLabelFrame(tk.Frame):
+    def __init__(self, master, game):
+        super().__init__(master)
+
+        self.master = master
         self.game = game
         self.game.add_observer(self)
 
@@ -415,113 +431,8 @@ class GameControlsFrame(tk.Frame):
         
         self.set_player_labels()
 
-        self.dice_sides_frame = tk.Frame(self)
-        self.dice_sides_frame.pack(pady=5)
-
-        self.roll_two_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(2), text='2')
-        self.roll_three_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(3), text='3')
-        self.roll_four_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(4), text='4')
-        self.roll_five_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(5), text='5')
-        self.roll_six_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(6), text='6')
-        self.roll_seven_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(7), text='7')
-        self.roll_eight_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(8), text='8')
-        self.roll_nine_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(9), text='9')
-        self.roll_ten_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(10), text='10')
-        self.roll_eleven_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(11), text='11')
-        self.roll_twelve_button = tk.Button(self.dice_sides_frame, command=lambda:self.on_roll(12), text='12')
-
-        self.roll_two_button.grid(row=0,column=0)
-        self.roll_three_button.grid(row=0,column=1)
-        self.roll_four_button.grid(row=0,column=2)
-        self.roll_five_button.grid(row=0,column=3)
-        self.roll_six_button.grid(row=0,column=4)
-        self.roll_seven_button.grid(row=0,column=5)
-        self.roll_eight_button.grid(row=1,column=0)
-        self.roll_nine_button.grid(row=1,column=1)
-        self.roll_ten_button.grid(row=1,column=2)
-        self.roll_eleven_button.grid(row=1,column=3)
-        self.roll_twelve_button.grid(row=1,column=4)
-
-        self.dice_frame = tk.Frame(self)
-        self.dice_frame.pack(pady=5)
-        
-        self.roll_button = tk.Button(self.dice_frame, command=lambda:self.on_dice_roll(), text='Roll Dice')
-        self.pass_turn_button = tk.Button(self.dice_frame, command=lambda:self.on_pass_turn(), text='Pass Turn')
-
-        self.roll_button.grid(row=0, column=0)
-        self.pass_turn_button.grid(row=0, column=1)
-
-        self.build_frame = tk.LabelFrame(self, text='Build')
-        self.build_frame.pack(pady=10)
-
-        self.build_road_button = tk.Button(self.build_frame, command=lambda:self.on_build_road(), width=10, text='Road')
-        self.build_settlement_button = tk.Button(self.build_frame, command=lambda:self.on_build_settlement(), width=10, text='Settlement')
-        self.upgrade_city_button = tk.Button(self.build_frame, command=lambda:self.on_build_city(), width=10, text='City')
-        self.buy_dev_card_button = tk.Button(self.build_frame, command=lambda:self.on_buy_dev_card(), width=10, text='Dev Card')
-
-        self.build_road_button.grid(row=0, column=0)
-        self.build_settlement_button.grid(row=0, column=1)
-        self.upgrade_city_button.grid(row=1, column=0)
-        self.buy_dev_card_button.grid(row=1, column=1)
-
-        self.set_states()
-
-    def notify(self, observable):
-        self.set_states()
-        self.set_player_labels()
-
-    def set_states(self):
-        self.roll_two_button.configure(state=tk_status[self.game.state.can_roll()])
-        self.roll_three_button.configure(state=tk_status[self.game.state.can_roll()])
-        self.roll_four_button.configure(state=tk_status[self.game.state.can_roll()])
-        self.roll_five_button.configure(state=tk_status[self.game.state.can_roll()])
-        self.roll_six_button.configure(state=tk_status[self.game.state.can_roll()])
-        self.roll_seven_button.configure(state=tk_status[self.game.state.can_roll()])
-        self.roll_eight_button.configure(state=tk_status[self.game.state.can_roll()])
-        self.roll_nine_button.configure(state=tk_status[self.game.state.can_roll()])
-        self.roll_ten_button.configure(state=tk_status[self.game.state.can_roll()])
-        self.roll_eleven_button.configure(state=tk_status[self.game.state.can_roll()])
-        self.roll_twelve_button.configure(state=tk_status[self.game.state.can_roll()])
-
-        self.roll_button.configure(state=tk_status[self.game.state.can_roll()])
-        self.pass_turn_button.configure(state=tk_status[self.game.state.can_pass_turn()])
-
-        self.build_road_button.configure(state=tk_status[self.game.state.can_build_road()])
-        self.build_settlement_button.configure(state=tk_status[self.game.state.can_build_settlement()])
-        self.upgrade_city_button.configure(state=tk_status[self.game.state.can_build_city()])
-        self.buy_dev_card_button.configure(state=tk_status[self.game.state.can_buy_dev_card()])
-
-    def on_dice_roll(self):
-        self.game.roll()
-        self.set_states()
-
-    def on_roll(self, roll):
-        self.game.roll(roll)
-        self.set_states()
-
-    def on_pass_turn(self):
-        self.game.pass_turn()
-        self.set_states()
-
-    def on_build_road(self):
-        self.game.start_building(PieceTypes.ROAD)
-        self.set_states()
-
-    def on_build_settlement(self):
-        self.game.start_building(PieceTypes.SETTLEMENT)
-        self.set_states()
-
-    def on_build_city(self):
-        self.game.start_building(PieceTypes.CITY)
-        self.set_states()
-    
-    def on_buy_dev_card(self):
-        self.game.buy_dev_card()
-        self.set_states()
-
     def set_player_labels(self):
         self._cur_player = self.game.current_player
-        #self._players = [tk.StringVar() for _ in self.game.players]
         for pl, player_s, player in zip(self.player_labels, self._players, self.game.players):
             s = ''
             if player.identifier == self._cur_player.identifier:
@@ -547,3 +458,130 @@ class GameControlsFrame(tk.Frame):
                         s += f'{n}x'
                     s += f'{card.value}'
             player_s.set(s)
+
+    def notify(self, observable):
+        self.set_player_labels()
+
+class DiceSidesFrame(tk.Frame):
+    def __init__(self, master, game):
+        super().__init__(master)
+        
+        self.master = master
+        self.game = game
+        self.game.add_observer(self)
+
+        self.roll_two_button = tk.Button(self, command=lambda:self.on_roll(2), text='2')
+        self.roll_three_button = tk.Button(self, command=lambda:self.on_roll(3), text='3')
+        self.roll_four_button = tk.Button(self, command=lambda:self.on_roll(4), text='4')
+        self.roll_five_button = tk.Button(self, command=lambda:self.on_roll(5), text='5')
+        self.roll_six_button = tk.Button(self, command=lambda:self.on_roll(6), text='6')
+        self.roll_seven_button = tk.Button(self, command=lambda:self.on_roll(7), text='7')
+        self.roll_eight_button = tk.Button(self, command=lambda:self.on_roll(8), text='8')
+        self.roll_nine_button = tk.Button(self, command=lambda:self.on_roll(9), text='9')
+        self.roll_ten_button = tk.Button(self, command=lambda:self.on_roll(10), text='10')
+        self.roll_eleven_button = tk.Button(self, command=lambda:self.on_roll(11), text='11')
+        self.roll_twelve_button = tk.Button(self, command=lambda:self.on_roll(12), text='12')
+
+        self.roll_two_button.grid(row=0,column=0)
+        self.roll_three_button.grid(row=0,column=1)
+        self.roll_four_button.grid(row=0,column=2)
+        self.roll_five_button.grid(row=0,column=3)
+        self.roll_six_button.grid(row=0,column=4)
+        self.roll_seven_button.grid(row=0,column=5)
+        self.roll_eight_button.grid(row=1,column=0)
+        self.roll_nine_button.grid(row=1,column=1)
+        self.roll_ten_button.grid(row=1,column=2)
+        self.roll_eleven_button.grid(row=1,column=3)
+        self.roll_twelve_button.grid(row=1,column=4)
+
+    def notify(self, observable):
+        self.set_states()
+
+    def set_states(self):
+        self.roll_two_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_three_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_four_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_five_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_six_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_seven_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_eight_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_nine_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_ten_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_eleven_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.roll_twelve_button.configure(state=tk_status[self.game.state.can_roll()])
+
+    def on_roll(self, roll):
+        self.game.roll(roll)
+        self.set_states()
+
+class ActionFrame(tk.Frame):
+    def __init__(self, master, game):
+        super().__init__(master)
+
+        self.master = master
+        self.game = game
+        self.game.add_observer(self)
+
+        self.roll_button = tk.Button(self, command=lambda:self.on_dice_roll(), text='Roll Dice')
+        self.pass_turn_button = tk.Button(self, command=lambda:self.on_pass_turn(), text='Pass Turn')
+
+        self.roll_button.grid(row=0, column=0)
+        self.pass_turn_button.grid(row=0, column=1)
+
+    def notify(self, observable):
+        self.set_states()
+    
+    def set_states(self):
+        self.roll_button.configure(state=tk_status[self.game.state.can_roll()])
+        self.pass_turn_button.configure(state=tk_status[self.game.state.can_pass_turn()])
+    
+    def on_dice_roll(self):
+        self.game.roll()
+        self.set_states()
+
+    def on_pass_turn(self):
+        self.game.pass_turn()
+        self.set_states()
+
+class BuildFrame(tk.LabelFrame):
+    def __init__(self, master, game, text=''):
+        super().__init__(master, text=text)
+
+        self.master = master
+        self.game = game
+        self.game.add_observer(self)
+
+        self.build_road_button = tk.Button(self, command=lambda:self.on_build_road(), width=10, text='Road')
+        self.build_settlement_button = tk.Button(self, command=lambda:self.on_build_settlement(), width=10, text='Settlement')
+        self.upgrade_city_button = tk.Button(self, command=lambda:self.on_build_city(), width=10, text='City')
+        self.buy_dev_card_button = tk.Button(self, command=lambda:self.on_buy_dev_card(), width=10, text='Dev Card')
+
+        self.build_road_button.grid(row=0, column=0)
+        self.build_settlement_button.grid(row=0, column=1)
+        self.upgrade_city_button.grid(row=1, column=0)
+        self.buy_dev_card_button.grid(row=1, column=1)
+
+    def notify(self, observable):
+        self.set_states()
+
+    def set_states(self):
+        self.build_road_button.configure(state=tk_status[self.game.state.can_build_road()])
+        self.build_settlement_button.configure(state=tk_status[self.game.state.can_build_settlement()])
+        self.upgrade_city_button.configure(state=tk_status[self.game.state.can_build_city()])
+        self.buy_dev_card_button.configure(state=tk_status[self.game.state.can_buy_dev_card()])
+
+    def on_build_road(self):
+        self.game.start_building(PieceTypes.ROAD)
+        self.set_states()
+
+    def on_build_settlement(self):
+        self.game.start_building(PieceTypes.SETTLEMENT)
+        self.set_states()
+
+    def on_build_city(self):
+        self.game.start_building(PieceTypes.CITY)
+        self.set_states()
+    
+    def on_buy_dev_card(self):
+        self.game.buy_dev_card()
+        self.set_states()
