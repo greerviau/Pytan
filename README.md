@@ -12,15 +12,20 @@ python3 -m pip install -e ./Pytan
 ```python
 from pytan.core.game import Game
 
-catan_game = Game()
-catan_game.start_game()
-catan_game.build_settlement(0x67)
-catan_game.build_road(0x67)
-
-catan_game.pass_turn()
-catan_game.roll() # catan_game.roll(6)
-
-catan_game.end_game(log=True)
+catan = Game()
+catan.start_game()
+catan.build_settlement(0x67)
+catan.build_road(0x67)
+...
+catan.pass_turn()
+catan.roll() # catan_game.roll(6)
+...
+catan.roll(7)
+catan.discard([('WHEAT',2), ('WOOD',1), ('ORE',3)])
+catan.move_robber(0x11)
+catan.steal(1) # player id
+...
+catan.end_game(log=True)
 ```
 
 ### UI
