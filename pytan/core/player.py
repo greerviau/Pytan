@@ -94,7 +94,10 @@ class Player(object):
     def count_resource_cards(self, card: ResourceCards) -> int:
         return self._resource_cards.count(card)
 
-    def collect_resource_cards(self, cards: list[tuple[ResourceCards, int]]):
+    def add_resource_card(self, card: ResourceCards):
+        self._resource_cards.append(card)
+
+    def add_resource_cards(self, cards: list[tuple[ResourceCards, int]]):
         for card, n in cards:
             for _ in range(n):
                 self._resource_cards.append(card)

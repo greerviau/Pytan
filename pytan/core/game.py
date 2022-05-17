@@ -222,7 +222,7 @@ class Game(object):
             for card, count in cards.items():
                 self.log(f'{player} picked up {count} {card.value}')
                 pickup_list.append((card,count))
-            player.collect_resource_cards(pickup_list)
+            player.add_resource_cards(pickup_list)
             self._remove_resources(pickup_list)
 
     def discard(self, resource_list: list[tuple[str, int]]):
@@ -414,6 +414,13 @@ class Game(object):
         self.log(f'{self._current_player} is stealing')
 
         self.notify()
+
+    def steal(self, player_id: int):
+        player_to_steal = self.get_player_by_id(player_id)
+        card = random.choice(player_to_steal.resource_cards)
+        player_to_steal.remove_resource_card(card)
+        self._current_player.add_resource_card(card)
+        self.log(f'{self._current_player} stole a {card.value} from {player_to_steal}')
                 
 if __name__ == '__main__':
     game = Game()
