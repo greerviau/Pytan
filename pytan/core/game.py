@@ -319,6 +319,7 @@ class Game(object):
             return self._board.legal_road_placements(self._current_player.identifier)
     
     def _build_road(self, coord: int):
+        road = None
         if coord in self.legal_road_placements():
             road = self._board.build_road(coord, self._current_player)
             if road is not None:
@@ -329,17 +330,20 @@ class Game(object):
                 self.log(f'{self._current_player} failed to build road at {hex(coord)}')
         else:
             self.log(f'{self._current_player} cannot build road at {hex(coord)}')
+        return road
 
     def build_road(self, coord: int):
         if self._game_state == GameStates.STARTING_ROAD:
-            self._build_road(coord)
-            self._game_state.set_state(GameStates.STARTING_SETTLEMENT)
-            self.pass_turn()
+            road = self._build_road(coord)
+            if road is not None
+                self._game_state.set_state(GameStates.STARTING_SETTLEMENT)
+                self.pass_turn()
         elif self._game_state.can_build_road(log=True):
-            self._build_road(coord)
+            road = self._build_road(coord)
+            if road is not None:
+                self._current_player.remove_resource_cards(ROAD)
+                self._add_resources(ROAD)
             self._game_state.set_state(GameStates.INGAME)
-            self._current_player.remove_resource_cards(ROAD)
-            self._add_resources(ROAD)
                         
         self.notify()
 
@@ -349,7 +353,8 @@ class Game(object):
         else:
             return self._board.legal_settlement_placements(self._current_player.identifier)
 
-    def _build_settlement(self, coord: int):
+    def _build_settlement(self, coord: int) -> Piece:
+        settlement = None
         if coord in self.legal_settlement_placements():
             settlement = self._board.build_settlement(coord, self._current_player)
             if settlement is not None:
@@ -360,26 +365,29 @@ class Game(object):
                 self.log(f'{self._current_player} failed to build settlement at {hex(coord)}')
         else:
             self.log(f'{self._current_player} cannot build settlement at {hex(coord)}')
+        return settlement
 
     def build_settlement(self, coord: int):
         if self._game_state == GameStates.STARTING_SETTLEMENT:
-            self._build_settlement(coord)
-            if self._current_player.settlements == 2:
+            settlement = self._build_settlement(coord)
+            if settlement is not None and self._current_player.settlements == 2:
                 tiles = self._board.node_neighboring_tiles(self._current_player.last_settlement_built)
                 self._collect_resources(tiles, coord)
                 self._remove_resources(SETTLEMENT)
-            self._game_state.set_state(GameStates.STARTING_ROAD)
+                self._game_state.set_state(GameStates.STARTING_ROAD)
         elif self._game_state.can_build_settlement(log=True):
-            self._build_settlement(coord)
+            settlement = self._build_settlement(coord)
+            if settlement is not None:
+                self._current_player.remove_resource_cards(SETTLEMENT)
+                self._add_resources(SETTLEMENT)
             self._game_state.set_state(GameStates.INGAME)
-            self._current_player.remove_resource_cards(SETTLEMENT)
-            self._add_resources(SETTLEMENT)
         self.notify()
 
     def legal_city_placements(self) -> list[int]:
         return self._board.legal_city_placements(self._current_player.identifier)
 
-    def _build_city(self, coord: int):
+    def _build_city(self, coord: int) -> Piece:
+        city = None
         if coord in self.legal_city_placements():
             city = self._board.build_city(coord, self._current_player)
             if city is not None:
@@ -390,13 +398,15 @@ class Game(object):
                 self.log(f'{self._current_player} failed to upgrade city at {hex(coord)}')
         else:
             self.log(f'{self._current_player} cannot upgrade city at {hex(coord)}')
+        return city
 
     def build_city(self, coord: int):
         if self._game_state.can_build_city(log=True):
-            self._build_city(coord)
+            city = self._build_city(coord)
+            if city is not None:
+                self._current_player.remove_resource_cards(CITY)
+                self._add_resources(CITY)
             self._game_state.set_state(GameStates.INGAME)
-            self._current_player.remove_resource_cards(CITY)
-            self._add_resources(CITY)
                         
         self.notify()
 
