@@ -151,39 +151,39 @@ class HexMesh(object):
                 self._edges[edge] = None
 
     @property
-    def tiles(self):
+    def tiles(self) -> dict[int, None]:
         return self._tiles
     
     @property
-    def nodes(self):
+    def nodes(self) -> dict[int, None]:
         return self._nodes
     
     @property
-    def edges(self):
+    def edges(self) -> dict[int, None]:
         return self._edges
     
     @property
-    def empty_nodes(self):
+    def empty_nodes(self) -> list[int]:
         return [coord for coord, node in self._nodes.items() if node is None]
 
     @property
-    def empty_edges(self):
+    def empty_edges(self) -> list[int]:
         return [coord for coord, edge in self._edges.items() if edge is None]
 
     @property
-    def occupied_nodes(self):
+    def occupied_nodes(self) -> dict[int, None]:
         return {coord: node for coord, node in self._nodes.items() if node is not None}
 
     @property
-    def occupied_edges(self):
+    def occupied_edges(self) -> dict[int, None]:
         return {coord: edge for coord, edge in self._edges.items() if edge is not None}
 
     @property
-    def edge_tiles(self):
+    def edge_tiles(self) -> dict[int, None]:
         n = self._n_layers * 6
         return {k: self._tiles[k] for k in list(reversed(list(self._tiles.keys())[-n:]))}
 
-    def hex_digits(self, coord: int):
+    def hex_digits(self, coord: int) -> tuple[int, int]:
         h = hex(coord).replace('0x', '')
         d1 = int(h[0], 16)
         d2 = 0
@@ -194,26 +194,26 @@ class HexMesh(object):
             d1 = 0
         return d1, d2
     
-    def tile_neighboring_tiles(self, tile_coord):
+    def tile_neighboring_tiles(self, tile_coord: int) -> list[int]:
         tile = []
         for d in TT_DIRS.values():
             tile.append(tile_coord + d)
 
-    def tile_neighboring_nodes(self, tile_coord):
+    def tile_neighboring_nodes(self, tile_coord: int) -> list[int]:
         nodes = []
         for d in TN_DIRS.values():
             nodes.append(tile_coord + d)
 
         return nodes
 
-    def tile_neighboring_edges(self, tile_coord):
+    def tile_neighboring_edges(self, tile_coord: int) -> list[int]:
         edges = []
         for d in TE_DIRS.values():
             edges.append(tile_coord + d)
 
         return edges
 
-    def node_neighboring_tiles(self, node_coord):
+    def node_neighboring_tiles(self, node_coord: int) -> dict[int, None]:
         tiles = []
         d1, d2 = self.hex_digits(node_coord)
         if d2 % 2 == 0:
@@ -227,7 +227,7 @@ class HexMesh(object):
 
         return self.confirm_tiles_exist(tiles)
 
-    def node_neighboring_nodes(self, node_coord):
+    def node_neighboring_nodes(self, node_coord: int) -> dict[int, None]:
         nodes = []
         d1, d2 = self.hex_digits(node_coord)
         if d2 % 2 == 0:
@@ -241,7 +241,7 @@ class HexMesh(object):
 
         return self.confirm_nodes_exist(nodes)
 
-    def node_neighboring_edges(self, node_coord):
+    def node_neighboring_edges(self, node_coord: int) -> dict[int, None]:
         edges = []
         d1, d2 = self.hex_digits(node_coord)
         if d2 % 2 == 0:
@@ -255,7 +255,7 @@ class HexMesh(object):
 
         return self.confirm_edges_exist(edges)
 
-    def edge_neighboring_tiles(self, edge_coord):
+    def edge_neighboring_tiles(self, edge_coord: int) -> dict[int, None]:
         tiles = []
         d1, d2 = self.hex_digits(edge_coord)
         if d1 % 2 == 0 and d2 % 2 == 0:
@@ -270,7 +270,7 @@ class HexMesh(object):
 
         return self.confirm_tiles_exist(tiles)
 
-    def edge_neighboring_nodes(self, edge_coord):
+    def edge_neighboring_nodes(self, edge_coord: int) -> dict[int, None]:
         nodes = []
         d1, d2 = self.hex_digits(edge_coord)
         if d1 % 2 == 0 and d2 % 2 == 0:
@@ -285,7 +285,7 @@ class HexMesh(object):
 
         return self.confirm_nodes_exist(nodes)
     
-    def edge_neighboring_edges(self, edge_coord):
+    def edge_neighboring_edges(self, edge_coord: int) -> dict[int, None]:
         edges = []
         d1, d2 = self.hex_digits(edge_coord)
         if d1 % 2 == 0 and d2 % 2 == 0:
@@ -305,23 +305,23 @@ class HexMesh(object):
             edges.append(edge_coord + EE_DIRS['NW'])
         return self.confirm_edges_exist(edges)
 
-    def nearest_tile_to_node(self, node_coord):
+    def nearest_tile_to_node(self, node_coord: int) -> int:
         tiles = self.node_neighboring_tiles(node_coord)
         tile_coords = list(tiles.keys())
         return list(self.confirm_tiles_exist(tile_coords).keys())[0] 
 
-    def nearest_tile_to_edge(self, edge_coord):
+    def nearest_tile_to_edge(self, edge_coord: int) -> int:
         tiles = self.edge_neighboring_tiles(edge_coord)
         tile_coords = list(tiles.keys())
         return list(self.confirm_tiles_exist(tile_coords).keys())[0] 
 
-    def confirm_tiles_exist(self, tiles):
+    def confirm_tiles_exist(self, tiles: list[int]) -> dict[int, None]:
         return {tile: self._tiles[tile] for tile in tiles if tile in self._tiles}
 
-    def confirm_nodes_exist(self, nodes):
+    def confirm_nodes_exist(self, nodes: list[int]) -> dict[int, None]:
         return {node: self._nodes[node] for node in nodes if node in self._nodes}
 
-    def confirm_edges_exist(self, edges):
+    def confirm_edges_exist(self, edges: list[int]) -> dict[int, None]:
         return {edge: self._edges[edge] for edge in edges if edge in self._edges}
 
     def __repr__(self):
