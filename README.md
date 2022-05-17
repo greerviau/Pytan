@@ -1,5 +1,5 @@
 # Pytan
-A python implementation of settlers of Catan
+A Python implementation of Settlers of Catan
 
 ## Installation
 ```
