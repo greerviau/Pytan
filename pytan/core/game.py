@@ -83,14 +83,14 @@ class Game(object):
         log_file.close()
         log_file = None
 
-    def log(self, text, end='\n'):
+    def log(self, text: str, end='\n'):
         print(text, end=end)
         self._logs.append(text)
     
-    def log_dump(self):
+    def log_dump(self) -> str:
         return '\n'.join(self._logs)
 
-    def add_observer(self, observable):
+    def add_observer(self, observable: object):
         self._observers.add(observable)
 
     def notify(self):
@@ -98,68 +98,73 @@ class Game(object):
             obs.notify(self)
 
     @property
-    def players(self):
+    def players(self) -> list[Player]:
         return self._players
     
     @property
-    def board(self):
+    def board(self) -> Board:
         return self._board
 
     @property
-    def state(self):
+    def state(self) -> CatanGameState:
         return self._game_state
     
     @property
-    def current_state(self):
+    def current_state(self) -> GameStates:
         return self._game_state.state
     
     @property
-    def resource_card_counts(self):
+    def resource_card_counts(self) -> dict[ResourceCards, int]:
         return self._resource_card_counts
 
     @property
-    def dev_cards(self):
+    def dev_cards(self) -> list[DevCards]:
         return self._dev_cards
 
     @property
-    def n_dev_cards(self):
+    def n_dev_cards(self) -> int:
         return len(self._dev_cards)
 
     @property
-    def current_player(self):
+    def current_player(self) -> Player:
         return self._current_player if not any(self._discarding_players) else self._discarding_players[0]
 
     @property
-    def current_rol(self):
+    def current_rol(self) -> int:
         return self._current_roll
     
     @property
-    def last_roll(self):
+    def last_roll(self) -> int:
         return self._last_roll
 
     @property
-    def has_rolled(self):
+    def has_rolled(self) -> bool:
         return self._has_rolled
 
     @property
-    def longest_road(self):
+    def longest_road(self) -> Player:
         return self._longest_road
 
     @property
-    def largest_army(self):
+    def largest_army(self) -> Player:
         return self._largest_army
 
     @property
-    def moves_made(self):
+    def moves_made(self) -> int:
         return self._moves_made
 
     @property
-    def turns(self):
+    def turns(self) -> int:
         return self._turns
 
     @state.setter
     def state(self, s: GameStates):
         self._game_state.set_state(s)
+
+    def get_player_by_id(self, player_id) -> Player:
+        for player in self._players:
+            if player.identifier == player_id:
+                return player
     
     def start_game(self):
         self.reset()
@@ -178,11 +183,6 @@ class Game(object):
         if log:
             self.save_to_log_file()
         self.notify()
-
-    def get_player_by_id(self, player_id):
-        for player in self._players:
-            if player.identifier == player_id:
-                return player
 
     def _remove_resources(self, resource_list: list[tuple[ResourceCards, int]]):
         for card, n in resource_list:
@@ -276,6 +276,7 @@ class Game(object):
                 self.log(f'{p} must discard {d} cards')
                 self._game_state.set_state(GameStates.DISCARDING)
             else:
+                self.log(f'{self._current_player} is moving the robber')
                 self._game_state.set_state(GameStates.MOVING_ROBBER)
         else:
             tiles = self._board.tiles_with_prob(dice_roll)
@@ -311,7 +312,7 @@ class Game(object):
             self._game_state.set_state(GameStates.BUILDING_CITY)
         self.notify()
 
-    def legal_road_placements(self):
+    def legal_road_placements(self) -> list[int]:
         if self._game_state == GameStates.STARTING_ROAD:
             return self._board.node_neighboring_edges(self._current_player.last_settlement_built)
         else:
@@ -342,7 +343,7 @@ class Game(object):
                         
         self.notify()
 
-    def legal_settlement_placements(self):
+    def legal_settlement_placements(self) -> list[int]:
         if self._game_state == GameStates.STARTING_SETTLEMENT:
             return self._board.legal_starting_settlement_placements(self._current_player.identifier)
         else:
@@ -375,7 +376,7 @@ class Game(object):
             self._add_resources(SETTLEMENT)
         self.notify()
 
-    def legal_city_placements(self):
+    def legal_city_placements(self) -> list[int]:
         return self._board.legal_city_placements(self._current_player.identifier)
 
     def _build_city(self, coord: int):
@@ -403,13 +404,15 @@ class Game(object):
         if self._game_state.can_buy_dev_card(log=True):
             card = self._dev_cards.pop(0)
             self._current_player.buy_dev_card(card)
-            self.log(f'{self._current_player.buy_dev_card} bought a {card.value} Dev Card')
+            self.log(f'{self._current_player} bought a {card.value} Dev Card')
                         
         self.notify()
 
     def move_robber(self, tile_coord: int):
         self._board.move_robber(tile_coord)
         self._game_state.set_state(GameStates.STEALING)
+        self.log(f'{self._current_player} is stealing')
+
         self.notify()
                 
 if __name__ == '__main__':

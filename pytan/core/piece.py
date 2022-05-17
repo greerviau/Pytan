@@ -14,19 +14,19 @@ class Piece(object):
         self._piece_type = piece_type
 
     @property
-    def coord(self):
+    def coord(self) -> int:
         return self._coord
     
     @property
-    def owner(self):
+    def owner(self) -> Player:
         return self._owner
 
     @property
-    def owner_id(self):
+    def owner_id(self) -> int:
         return self._owner.identifier
 
     @property
-    def piece_type(self):
+    def piece_type(self) -> PieceTypes:
         return self._piece_type
 
     def __repr__(self):

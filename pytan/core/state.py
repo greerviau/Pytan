@@ -14,12 +14,12 @@ class GameStates(Enum):
     STEALING = 'STEALING'
 
 class CatanGameState(object):
-    def __init__(self, game):
+    def __init__(self, game: 'Game'):
         self._state = GameStates.UNDEFINED
         self._game = game
 
     @property
-    def state(self):
+    def state(self) -> GameStates:
         return self._state
 
     def __eq__(self, other):
@@ -28,10 +28,10 @@ class CatanGameState(object):
     def set_state(self, s: GameStates):
         self._state = s
 
-    def log(self, text, end='\n'):
+    def log(self, text: str, end='\n'):
         self._game.log(text, end=end)
 
-    def can_build_road(self, log=False):
+    def can_build_road(self, log=False) -> bool:
         if self._state != GameStates.UNDEFINED:
             if self._state in [GameStates.INGAME, GameStates.BUILDING_ROAD]:
                 if not self.can_roll():
@@ -53,7 +53,7 @@ class CatanGameState(object):
             self.log('Game has not started')
         return False
 
-    def can_build_settlement(self, log=False):
+    def can_build_settlement(self, log=False) -> bool:
         if self._state != GameStates.UNDEFINED:
             if self._state in [GameStates.INGAME, GameStates.BUILDING_SETTLEMENT]:
                 if not self.can_roll():
@@ -75,7 +75,7 @@ class CatanGameState(object):
             self.log('Game has not started')
         return False
 
-    def can_build_city(self, log=False):
+    def can_build_city(self, log=False) -> bool:
         if self._state != GameStates.UNDEFINED:
             if self._state in [GameStates.INGAME, GameStates.BUILDING_CITY]:
                 if not self.can_roll():
@@ -100,25 +100,25 @@ class CatanGameState(object):
             self.log('Game has not started')
         return False
     
-    def is_building_road(self):
+    def is_building_road(self) -> bool:
         return self._state in [GameStates.STARTING_ROAD, GameStates.BUILDING_ROAD]
 
-    def is_building_settlement(self):
+    def is_building_settlement(self) -> bool:
         return self._state in [GameStates.STARTING_SETTLEMENT, GameStates.BUILDING_SETTLEMENT]
     
-    def is_building_city(self):
+    def is_building_city(self) -> bool:
         return self._state == GameStates.BUILDING_CITY
 
-    def can_roll(self):
+    def can_roll(self) -> bool:
         return self._state == GameStates.INGAME and not self._game.has_rolled
 
-    def can_pass_turn(self):
+    def can_pass_turn(self) -> bool:
         return self._state == GameStates.INGAME and self._game.has_rolled
 
-    def can_trade(self):
+    def can_trade(self) -> bool:
         return False
 
-    def can_buy_dev_card(self, log=False):
+    def can_buy_dev_card(self, log=False) -> bool:
         if self._state != GameStates.UNDEFINED:
             if self._state == GameStates.INGAME:
                 if self._game.current_player.can_buy_dev_card():
@@ -137,7 +137,7 @@ class CatanGameState(object):
             self.log('Game has not started')
         return False
 
-    def is_moving_robber(self):
+    def is_moving_robber(self) -> bool:
         return self._state == GameStates.MOVING_ROBBER
 
     def __repr__(self):

@@ -28,7 +28,7 @@ PORT_TYPE_COUNTS = {
 }
 
 class Port(object):
-    def __init__(self, coord_1, coord_2, tile, direction, port_type):
+    def __init__(self, coord_1: int, coord_2: int, tile: int, direction: str, port_type: PortTypes):
         self._coord_1 = coord_1
         self._coord_2 = coord_2
         self._tile = tile
@@ -39,34 +39,34 @@ class Port(object):
             self._exchange = 3
 
     @property
-    def coord_1(self):
+    def coord_1(self) -> int:
         return self._coord_1
     
     @property
-    def coord_2(self):
+    def coord_2(self) -> int:
         return self._coord_2
     
     @property
-    def tile(self):
+    def tile(self) -> int:
         return self._tile
 
     @property
-    def direction(self):
+    def direction(self) -> str:
         return self._direction
 
     @property
-    def port_type(self):
+    def port_type(self) -> PortTypes:
         return self._port_type
 
     @property
-    def exchange(self):
+    def exchange(self) -> int:
         return self._exchange
 
-    def can_exchange(self, resource_cards: list[ResourceCards]):
+    def can_exchange(self, resource_cards: list[ResourceCards]) -> bool:
         required_card = PORT_TO_RESOURCE[self._port_type] if self._port_type != PortTypes.ANY else resource_cards[0]
         return len(resource_cards) >= self._exchange and resource_cards.count(required_card) == len(resource_cards)
 
-    def node_is_on_port(self, node_coord: int):
+    def node_is_on_port(self, node_coord: int) -> bool:
         return node_coord == self._coord_1 or node_coord == self._coord_2
     
     def __repr__(self):
