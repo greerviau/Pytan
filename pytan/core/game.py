@@ -53,6 +53,7 @@ class Game(object):
         self._current_player_idx = random.randint(0,len(self._players)-1)
         self._current_player = self._players[self._current_player_idx]
         self._discarding_players = []
+        self._players_to_steal_from = []
         
         self._current_roll = 0
         self._last_roll = 0
@@ -94,7 +95,10 @@ class Game(object):
 
     def notify(self):
         for obs in self._observers:
-            obs.notify(self)
+            try:
+                obs.notify(self)
+            except:
+                pass
 
     @property
     def players(self) -> list[Player]:
@@ -127,6 +131,14 @@ class Game(object):
     @property
     def current_player(self) -> Player:
         return self._current_player if not any(self._discarding_players) else self._discarding_players[0]
+
+    @property
+    def discarding_players(self) -> list[Player]:
+        return self._discarding_players
+
+    @property
+    def players_to_steal_from(self) -> list[Player]:
+        return self._players_to_steal_from
 
     @property
     def current_rol(self) -> int:
@@ -231,7 +243,7 @@ class Game(object):
         self.discard(new_resource_list)
 
     def discard(self, resource_list: list[tuple[ResourceCards, int]]):
-        if any(self._discarding_players):
+        if self._game_state.can_discard(log=True):
             player = self._discarding_players[0]
             d = player.n_resource_cards // 2
             if len(resource_list) > d:
@@ -255,35 +267,36 @@ class Game(object):
         self.notify()
 
     def roll(self, dice_roll=0):
-        self._has_rolled = True
-        if dice_roll == 0:
-            # Roll a random dice roll
-            dice_1 = random.choice([1,2,3,4,5,6])
-            dice_2 = random.choice([1,2,3,4,5,6])
-            dice_roll = dice_1 + dice_2
-        # Roll a determined dice roll
-        self._last_roll = self._current_roll
-        self._current_roll = dice_roll
-        self.log(f'{self._current_player} rolled a {dice_roll}')
-        if dice_roll == 7:
-            for player in self._players:
-                if player.n_resource_cards > 7:
-                    self._discarding_players.append(player)
-            if any(self._discarding_players):
-                p = self._discarding_players[0]
-                d = p.n_resource_cards // 2
-                self.log(f'{p} must discard {d} cards')
-                self._game_state.set_state(GameStates.DISCARDING)
+        if self._game_state.can_roll(log=True):
+            self._has_rolled = True
+            if dice_roll == 0:
+                # Roll a random dice roll
+                dice_1 = random.choice([1,2,3,4,5,6])
+                dice_2 = random.choice([1,2,3,4,5,6])
+                dice_roll = dice_1 + dice_2
+            # Roll a determined dice roll
+            self._last_roll = self._current_roll
+            self._current_roll = dice_roll
+            self.log(f'{self._current_player} rolled a {dice_roll}')
+            if dice_roll == 7:
+                for player in self._players:
+                    if player.n_resource_cards > 7:
+                        self._discarding_players.append(player)
+                if any(self._discarding_players):
+                    p = self._discarding_players[0]
+                    d = p.n_resource_cards // 2
+                    self.log(f'{p} must discard {d} cards')
+                    self._game_state.set_state(GameStates.DISCARDING)
+                else:
+                    self.log(f'{self._current_player} is moving the robber')
+                    self._game_state.set_state(GameStates.MOVING_ROBBER)
             else:
-                self.log(f'{self._current_player} is moving the robber')
-                self._game_state.set_state(GameStates.MOVING_ROBBER)
-        else:
-            tiles = self._board.tiles_with_prob(dice_roll)
-            self._collect_resources(tiles)
+                tiles = self._board.tiles_with_prob(dice_roll)
+                self._collect_resources(tiles)
                 
         self.notify()
 
-    def pass_turn(self):
+    def _pass_turn(self):
         self._has_rolled = False
         self._turns += 1
         d = 1
@@ -301,6 +314,10 @@ class Game(object):
         self._current_player = self._players[self._current_player_idx]
         self.log(f'It is now {self._current_player}\'s turn')
         self.notify()
+
+    def pass_turn(self):
+        if self._game_state.can_pass_turn(log=True):
+            self._pass_turn()
 
     def start_building(self, piece_type: PieceTypes):
         if piece_type == PieceTypes.ROAD:
@@ -336,7 +353,7 @@ class Game(object):
             road = self._build_road(coord)
             if road is not None:
                 self._game_state.set_state(GameStates.STARTING_SETTLEMENT)
-                self.pass_turn()
+                self._pass_turn()
         elif self._game_state.can_build_road(log=True):
             road = self._build_road(coord)
             if road is not None:
@@ -419,18 +436,35 @@ class Game(object):
         self.notify()
 
     def move_robber(self, tile_coord: int):
-        self._board.move_robber(tile_coord)
-        self._game_state.set_state(GameStates.STEALING)
-        self.log(f'{self._current_player} is stealing')
+        if self._game_state.is_moving_robber(log=True):
+            self._board.move_robber(tile_coord)
+            players = self._board.players_on_tile(tile_coord)
+            if any(players):
+                self._game_state.set_state(GameStates.STEALING)
+                self.log(f'{self._current_player} is stealing')
+                self._players_to_steal_from = players
+            else:
+                self._game_state.set_state(GameStates.INGAME)
 
         self.notify()
 
     def steal(self, player_id: int):
-        player_to_steal = self.get_player_by_id(player_id)
-        card = random.choice(player_to_steal.resource_cards)
-        player_to_steal.remove_resource_card(card)
-        self._current_player.add_resource_card(card)
-        self.log(f'{self._current_player} stole a {card.value} from {player_to_steal}')
+        if self._game_state.can_steal(log=True):
+            player_to_steal = self.get_player_by_id(player_id)
+            if player_to_steal in players_to_steal_from:
+                card = random.choice(player_to_steal.resource_cards)
+                player_to_steal.remove_resource_card(card)
+                self._current_player.add_resource_card(card)
+                self.log(f'{self._current_player} stole a {card.value} from {player_to_steal}')
+            else:
+                self.log(f'Cant steal from {player_to_steal}')
+
+        self.notify()
+
+    #def trade(self, giving: list[tuple[ResourceCards, int]], wanting: list[tuple[ResourceCards, int]], players: list[Player]):
+    #    if self._game_state.can_trade():
+
+
                 
 if __name__ == '__main__':
     game = Game()

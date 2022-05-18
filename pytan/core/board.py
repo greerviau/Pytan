@@ -174,6 +174,14 @@ class Board(hexmesh.HexMesh):
     def tiles_with_prob(self, prob: int) -> dict[int, CatanTile]:
         return {coord: tile for coord, tile in self._tiles.items() if type(tile) == CatanTile and tile.prob == prob}
 
+    def players_on_tile(self, tile_coord: int) -> list[Player]:
+        players = set()
+        for node_coord in self.tile_neighboring_nodes(tile_coord):
+            node = self._nodes[node_coord]
+            if type(node) == Piece:
+                players.add(node.owner)
+        return list(players)
+
     def settlements_on_tile(self, tile_coord: int) -> dict[int, Piece]:
         settlements = {}
         for node_coord in self.tile_neighboring_nodes(tile_coord):

@@ -30,9 +30,12 @@ class CatanGameState(object):
 
     def log(self, text: str, end='\n'):
         self._game.log(text, end=end)
+    
+    def game_has_started(self) -> bool:
+        return self._state != GameStates.UNDEFINED
 
     def can_build_road(self, log=False) -> bool:
-        if self._state != GameStates.UNDEFINED:
+        if self.game_has_started():
             if self._state in [GameStates.INGAME, GameStates.BUILDING_ROAD]:
                 if not self.can_roll():
                     if self._game.current_player.can_buy_road():
@@ -54,7 +57,7 @@ class CatanGameState(object):
         return False
 
     def can_build_settlement(self, log=False) -> bool:
-        if self._state != GameStates.UNDEFINED:
+        if self.game_has_started():
             if self._state in [GameStates.INGAME, GameStates.BUILDING_SETTLEMENT]:
                 if not self.can_roll():
                     if self._game.current_player.can_buy_settlement():
@@ -76,7 +79,7 @@ class CatanGameState(object):
         return False
 
     def can_build_city(self, log=False) -> bool:
-        if self._state != GameStates.UNDEFINED:
+        if self.game_has_started():
             if self._state in [GameStates.INGAME, GameStates.BUILDING_CITY]:
                 if not self.can_roll():
                     if self._game.current_player.can_buy_city():
@@ -100,26 +103,77 @@ class CatanGameState(object):
             self.log('Game has not started')
         return False
     
-    def is_building_road(self) -> bool:
+    def is_building_road(self, log=False) -> bool:
         return self._state in [GameStates.STARTING_ROAD, GameStates.BUILDING_ROAD]
 
-    def is_building_settlement(self) -> bool:
+    def is_building_settlement(self, log=False) -> bool:
         return self._state in [GameStates.STARTING_SETTLEMENT, GameStates.BUILDING_SETTLEMENT]
     
-    def is_building_city(self) -> bool:
+    def is_building_city(self, log=False) -> bool:
         return self._state == GameStates.BUILDING_CITY
 
-    def can_roll(self) -> bool:
-        return self._state == GameStates.INGAME and not self._game.has_rolled
+    def can_roll(self, log=False) -> bool:
+        if self.game_has_started():
+            if self._state == GameStates.INGAME:
+                if not self._game.has_rolled:
+                    return True
+                elif log:
+                    self.log('Dice have already been rolled this turn')
+            elif log:
+                self.log(f'Cant pass turn, current state {self._state}')
+        elif log:
+            self.log('Game has not started')
 
-    def can_pass_turn(self) -> bool:
-        return self._state == GameStates.INGAME and self._game.has_rolled
-
-    def can_trade(self) -> bool:
+    def can_pass_turn(self, log=False) -> bool:
+        if self.game_has_started():
+            if self._state == GameStates.INGAME:
+                if self._game.has_rolled:
+                    return True
+                elif log:
+                    self.log('Roll first')
+            elif log:
+                self.log(f'Cant pass turn, current state {self._state}')
+        elif log:
+            self.log('Game has not started')
         return False
 
+    def can_discard(self, log=False) -> bool:
+        if self.game_has_started():
+            if self._state == GameStates.DISCARDING:
+                if any(self._game.discarding_players):
+                    return True
+                elif log:
+                    self.log('No players need to discard')
+        elif log:
+            self.log('Game has not started')
+        return False
+
+    def can_steal(self, log=False) -> bool:
+        if self.game_has_started():
+            if self._state == GameStates.STEALING:
+                if any(self._game.players_to_steal_from):
+                    return True
+                elif log:
+                    self.log('No players to steal from')
+            elif log:
+                self.log('Cant steal')
+        elif log:
+            self.log('Game has not started')
+        return False
+
+    def can_trade(self, log=False) -> bool:
+        if self.game_has_started():
+            if self._state in [GameStates.INGAME, GameStates.TRADING]:
+                return True
+            else:
+                self.log(f'Cant trade, current state {self._state}')
+        elif log:
+            self.log('Game has not started')
+        return False
+
+
     def can_buy_dev_card(self, log=False) -> bool:
-        if self._state != GameStates.UNDEFINED:
+        if self.game_has_started():
             if self._state == GameStates.INGAME:
                 if self._game.current_player.can_buy_dev_card():
                     if not self.can_roll():
@@ -137,8 +191,15 @@ class CatanGameState(object):
             self.log('Game has not started')
         return False
 
-    def is_moving_robber(self) -> bool:
-        return self._state == GameStates.MOVING_ROBBER
+    def is_moving_robber(self, log=False) -> bool:
+        if self.game_has_started():
+            if self._state == GameStates.MOVING_ROBBER:
+                return True
+            elif log:
+                self.log('Cant move robber')
+        elif log:
+            self.log('Game has not started')
+        return False
 
     def __repr__(self):
         return self._state.value

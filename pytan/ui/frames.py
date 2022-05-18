@@ -403,6 +403,8 @@ class GameControlsFrame(tk.Frame):
     def __init__(self, master, game):
         super().__init__()
         self.master = master
+        self.game = game
+        self.game.add_observer(self)
         
         player_label_frame = PlayerLabelFrame(self, game)
         dice_sides_frame = DiceSidesFrame(self, game)
@@ -413,6 +415,10 @@ class GameControlsFrame(tk.Frame):
         dice_sides_frame.pack(pady=5)
         action_frame.pack(pady=5)
         build_frame.pack(pady=5)
+
+    def notify(self, observable):
+        #TODO
+        pass
 
 class PlayerLabelFrame(tk.Frame):
     def __init__(self, master, game):
