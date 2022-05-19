@@ -12,6 +12,9 @@ class GameStates(Enum):
     DISCARDING = 'DISCARDING'
     MOVING_ROBBER = 'MOVING_ROBBER'
     STEALING = 'STEALING'
+    ROADBUILDER = 'ROADBUILDER'
+    MONOPOLY = 'MONOPOLY'
+    PLENTY = 'PLENTY'
 
 class CatanGameState(object):
     def __init__(self, game: 'Game'):
@@ -163,9 +166,12 @@ class CatanGameState(object):
 
     def can_trade(self, log=False) -> bool:
         if self.game_has_started():
-            if self._state in [GameStates.INGAME, GameStates.TRADING]:
-                return True
-            else:
+            if self._state == GameStates.INGAME:
+                if not self.can_roll():
+                    return True
+                elif log:
+                    self.log('Roll first')
+            elif log:
                 self.log(f'Cant trade, current state {self._state}')
         elif log:
             self.log('Game has not started')
@@ -197,6 +203,71 @@ class CatanGameState(object):
                 return True
             elif log:
                 self.log('Cant move robber')
+        elif log:
+            self.log('Game has not started')
+        return False
+
+    def can_play_knight(self, log=False) -> bool:
+        if self.game_has_started():
+            if self._state == GameStates.INGAME:
+                if not self.can_roll():
+                    if self._game.current_player.can_play_knight(self._game.turn):
+                        return True
+                    elif log:
+                        self.log(f'{self._game.current_player} has no valid knight card')
+                elif log:
+                    self.log(f'Cant play knight, current state {self._state}')
+            elif log:
+                self.log(f'Roll first')
+        elif log:
+            self.log('Game has not started')
+        return False
+    
+    def can_play_monopoly(self, log=False) -> bool:
+        if self.game_has_started():
+            if self._state == GameStates.INGAME:
+                if not self.can_roll():
+                    if self._game.current_player.can_play_monopoly(self._game.turn):
+                        return True
+                    elif log:
+                        self.log(f'{self._game.current_player} has no valid monopoly card')
+                elif log:
+                    self.log('Roll first')
+            elif log:
+                self.log(f'Cant play monopoly, current state {self._state}')
+        elif log:
+            self.log('Game has not started')
+        return False
+
+    def can_play_road_builder(self, log=False) -> bool:
+        if self.game_has_started():
+            if self._state == GameStates.INGAME:
+                if not self.can_roll():
+                    if self._game.current_player.can_play_road_builder(self._game.turn):
+                        return True
+                    elif log:
+                        self.log(f'{self._game.current_player} has no valid road builder card')
+                elif log:
+                    self.log('Roll first')
+            elif log:
+                self.log(f'Cant play road builder, current state {self._state}')
+        elif log:
+            self.log('Game has not started')
+        return False
+
+
+    def can_play_plenty(self, log=False) -> bool:
+        if self.game_has_started():
+            if self._state == GameStates.INGAME:
+                if not self.can_roll():
+                    if self._game.current_player.can_play_plenty(self._game.turn):
+                        return True
+                    elif log:
+                        self.log(f'{self._game.current_player} has no valid plenty card')
+                elif log:
+                    self.log('Roll first')
+            elif log:
+                self.log(f'Cant play plenty, current state {self._state}')
         elif log:
             self.log('Game has not started')
         return False

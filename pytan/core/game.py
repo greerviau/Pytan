@@ -63,7 +63,7 @@ class Game(object):
         self._largest_army = None
 
         self._moves_made = 0
-        self._turns = 0
+        self._turn = 0
 
         self._game_start = datetime.now()
         self._logs = []
@@ -165,8 +165,8 @@ class Game(object):
         return self._moves_made
 
     @property
-    def turns(self) -> int:
-        return self._turns
+    def turn(self) -> int:
+        return self._turn
 
     @state.setter
     def state(self, s: GameStates):
@@ -250,7 +250,7 @@ class Game(object):
                 self.log(f'Too many resource cards to discard, discard {d} cards')
             else:
                 self._discarding_players.pop(0)
-                player.remove_cards(resource_list)
+                player.remove_resource_cards(resource_list)
                 self._add_resources(resource_list)
                 s = f'{player} discarded '
                 for card, n in resource_list:
@@ -298,13 +298,13 @@ class Game(object):
 
     def _pass_turn(self):
         self._has_rolled = False
-        self._turns += 1
+        self._turn += 1
         d = 1
-        if self._turns == 4 or self._turns == 8:
+        if self._turn == 4 or self._turn == 8:
             d = 0
-        elif self._turns >= 5 and self._turns < 8:
+        elif self._turn >= 5 and self._turn < 8:
             d = -1
-        if self._turns >= 8:
+        if self._turn >= 8:
             self._game_state.set_state(GameStates.INGAME)
         self._current_player_idx += d
         if self._current_player_idx >= len(self._players):
@@ -334,7 +334,7 @@ class Game(object):
         else:
             return self._board.legal_road_placements(self._current_player.identifier)
     
-    def _build_road(self, coord: int):
+    def _build_road(self, coord: int) -> Piece:
         road = None
         if coord in self.legal_road_placements():
             road = self._board.build_road(coord, self._current_player)
@@ -430,7 +430,7 @@ class Game(object):
     def buy_dev_card(self):
         if self._game_state.can_buy_dev_card(log=True):
             card = self._dev_cards.pop(0)
-            self._current_player.buy_dev_card(card)
+            self._current_player.buy_dev_card(card, self._turn)
             self.log(f'{self._current_player} bought a {card.value} Dev Card')
                         
         self.notify()
@@ -438,8 +438,11 @@ class Game(object):
     def move_robber(self, tile_coord: int):
         if self._game_state.is_moving_robber(log=True):
             self._board.move_robber(tile_coord)
-            players = self._board.players_on_tile(tile_coord)
-            if any(players):
+            players = [p for p in self._board.players_on_tile(tile_coord) if any(p.resource_cards)]
+            if len(players) == 1:
+                self._game_state.set_state(GameStates.STEALING)
+                self.steal(players[0].identifier)
+            elif any(players):
                 self._game_state.set_state(GameStates.STEALING)
                 self.log(f'{self._current_player} is stealing')
                 self._players_to_steal_from = players
@@ -451,18 +454,46 @@ class Game(object):
     def steal(self, player_id: int):
         if self._game_state.can_steal(log=True):
             player_to_steal = self.get_player_by_id(player_id)
-            if player_to_steal in players_to_steal_from:
-                card = random.choice(player_to_steal.resource_cards)
-                player_to_steal.remove_resource_card(card)
-                self._current_player.add_resource_card(card)
-                self.log(f'{self._current_player} stole a {card.value} from {player_to_steal}')
+            if player_to_steal in self._players_to_steal_from:
+                if any(player_to_steal.resource_cards):
+                    card = random.choice(player_to_steal.resource_cards)
+                    player_to_steal.remove_resource_card(card)
+                    self._current_player.add_resource_card(card)
+                    self.log(f'{self._current_player} stole a {card.value} from {player_to_steal}')
+                    self._game_state.set_state(GameStates.INGAME)
+                else:
+                    self.log(f'{player_to_steal} has no cards to steal')
             else:
                 self.log(f'Cant steal from {player_to_steal}')
 
         self.notify()
 
-    #def trade(self, giving: list[tuple[ResourceCards, int]], wanting: list[tuple[ResourceCards, int]], players: list[Player]):
-    #    if self._game_state.can_trade():
+    def play_knight(self):
+        if self._game_state.can_play_knight(log=True):
+            self.log(f'{self._current_player} played a Knight')
+            self._game_state.set_state(GameStates.MOVING_ROBBER)
+            self._current_player.remove_dev_card(DevCards.KNIGHT)
+        self.notify()
+
+    def play_monopoly(self, resource_card: ResourceCards):
+        if self._game_state.can_play_monopoly(log=True):
+            pass
+        self.notify()
+
+    def play_road_builder(self):
+        if self._game_state.can_play_road_builder(log=True):
+            pass
+        self.notify()
+
+    def play_year_plenty(self, pickup_list: list[tuple[ResourceCards, int]]):
+        if self._game_state.can_play_plenty(log=True):
+            pass
+        self.notify()
+
+    def trade(self, giving: list[tuple[ResourceCards, int]], wanting: list[tuple[ResourceCards, int]], players: list[Player]):
+        if self._game_state.can_trade():
+            pass
+        self.notify()
 
 
                 

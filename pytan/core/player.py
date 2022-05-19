@@ -117,18 +117,25 @@ class Player(object):
         return True
 
     def count_dev_cards(self, card: DevCards) -> int:
-        return self._dev_cards.count(card)
+        count = 0
+        for c, _ in self._dev_cards:
+            if c == card:
+                count += 1
+        return count
 
     def can_buy_dev_card(self) -> bool:
         return self.are_cards_in_hand(DEV_CARD)
 
-    def buy_dev_card(self, dev_card: DevCards):
+    def buy_dev_card(self, dev_card: DevCards, turn_bought: int):
         if self.can_buy_dev_card():
             self.remove_resource_cards(DEV_CARD)
-            self._dev_cards.append(dev_card)
+            self._dev_cards.append((dev_card, turn_bought))
 
     def remove_dev_card(self, dev_card: DevCards):
-        card = self.DevCards.remove(dev_card)
+        for card, turn in self._dev_cards:
+            if card == dev_card:
+                self._dev_cards.remove((card,turn))
+                break
         if dev_card == DevCards.KNIGHT:
             self._knights_played += 1
 
@@ -153,6 +160,30 @@ class Player(object):
         self._last_city_built = coord
         self._settlements -= 1
         self._cities += 1
+
+    def can_play_knight(self, turn: int) -> bool:
+        for card, t in self._dev_cards:
+            if card == DevCards.KNIGHT and t < turn:
+                return True
+        return False
+
+    def can_play_monopoly(self, turn: int) -> bool:
+        for card, t in self._dev_cards:
+            if card == DevCards.MONOPOLY and t < turn:
+                return True
+        return False
+
+    def can_play_road_builder(self, turn: int) -> bool:
+        for card, t in self._dev_cards:
+            if card == DevCards.ROADBUILD and t < turn:
+                return True
+        return False
+
+    def can_play_plenty(self, turn: int) -> bool:
+        for card, t in self._dev_cards:
+            if card == DevCards.PLENTY and t < turn:
+                return True
+        return False
 
     def clone_player(self) -> 'Player':
         return Player(self._name, self._identifier, self._color)
