@@ -409,16 +409,41 @@ class GameControlsFrame(tk.Frame):
         player_label_frame = PlayerLabelFrame(self, game)
         dice_sides_frame = DiceSidesFrame(self, game)
         action_frame = ActionFrame(self, game)
-        build_frame = BuildFrame(self, game, text='Build')
+        build_frame = BuildFrame(self, game)
+        dev_card_frame = DevCardFrame(self, game)
+        self.trade_button = tk.Button(self, command=lambda:self.on_trade, width=20, text='Trade')
+
+        self.discard_frame = DiscardFrame(self, self.game)
+        self.steal_frame = StealFrame(self, self.game)
+        self.trade_frame = TradingFrame(self, self.game)
 
         player_label_frame.pack(pady=5, anchor='w')
         dice_sides_frame.pack(pady=5)
         action_frame.pack(pady=5)
         build_frame.pack(pady=5)
+        dev_card_frame.pack(pady=5)
+        self.trade_button.pack(pady=5)
 
     def notify(self, observable):
-        #TODO
-        pass
+        if self.game.state == GameStates.DISCARDING:
+            self.discard_frame = DiscardFrame(self, self.game)
+            self.discard_frame.pack(pady=5)
+        elif self.game.state == GameStates.STEALING:
+            self.steal_frame = StealFrame(self, self.game)
+            self.steal_frame.pack(pady=5)
+        else:
+            self.discard_frame.pack_forget()
+            self.steal_frame.pack_forget()
+            self.trade_frame.pack_forget()
+        self.set_states()
+
+    def set_states(self):
+        self.trade_button.configure(state=tk_status[self.game.state.can_trade()])
+
+    def on_trade(self):
+        self.game.state.set_state(GameStates.TRADING)
+        self.trade_frame = TradingFrame(self, self.game)
+        self.trade_frame.pack(pady=5)
 
 class PlayerLabelFrame(tk.Frame):
     def __init__(self, master, game):
@@ -528,8 +553,8 @@ class ActionFrame(tk.Frame):
         self.game = game
         self.game.add_observer(self)
 
-        self.roll_button = tk.Button(self, command=lambda:self.on_dice_roll(), text='Roll Dice')
-        self.pass_turn_button = tk.Button(self, command=lambda:self.on_pass_turn(), text='Pass Turn')
+        self.roll_button = tk.Button(self, command=self.on_dice_roll, text='Roll Dice')
+        self.pass_turn_button = tk.Button(self, command=self.on_pass_turn, text='Pass Turn')
 
         self.roll_button.grid(row=0, column=0)
         self.pass_turn_button.grid(row=0, column=1)
@@ -550,17 +575,17 @@ class ActionFrame(tk.Frame):
         self.set_states()
 
 class BuildFrame(tk.LabelFrame):
-    def __init__(self, master, game, text=''):
-        super().__init__(master, text=text)
+    def __init__(self, master, game):
+        super().__init__(master, text='Build')
 
         self.master = master
         self.game = game
         self.game.add_observer(self)
 
-        self.build_road_button = tk.Button(self, command=lambda:self.on_build_road(), width=10, text='Road')
-        self.build_settlement_button = tk.Button(self, command=lambda:self.on_build_settlement(), width=10, text='Settlement')
-        self.upgrade_city_button = tk.Button(self, command=lambda:self.on_build_city(), width=10, text='City')
-        self.buy_dev_card_button = tk.Button(self, command=lambda:self.on_buy_dev_card(), width=10, text='Dev Card')
+        self.build_road_button = tk.Button(self, command=self.on_build_road, width=10, text='Road')
+        self.build_settlement_button = tk.Button(self, command=self.on_build_settlement, width=10, text='Settlement')
+        self.upgrade_city_button = tk.Button(self, command=self.on_build_city, width=10, text='City')
+        self.buy_dev_card_button = tk.Button(self, command=self.on_buy_dev_card, width=10, text='Dev Card')
 
         self.build_road_button.grid(row=0, column=0)
         self.build_settlement_button.grid(row=0, column=1)
@@ -591,3 +616,339 @@ class BuildFrame(tk.LabelFrame):
     def on_buy_dev_card(self):
         self.game.buy_dev_card()
         self.set_states()
+
+class DevCardFrame(tk.Frame):
+    def __init__(self, master, game):
+        super().__init__(master)
+
+        self.master = master
+        self.game = game
+        self.game.add_observer(self)
+
+        self.button_frame = tk.LabelFrame(self, text='Play Dev Card')
+        self.button_frame.pack()
+
+        self.knight_button = tk.Button(self.button_frame, command=self.on_knight, width=10, text='Knight')
+        self.monopoly_button = tk.Button(self.button_frame, command=self.on_monopoly, width=10, text='Monopoly')
+        self.road_builder_button = tk.Button(self.button_frame, command=self.on_road_builder, width=10, text='Road Builder')
+        self.plenty_button = tk.Button(self.button_frame, command=self.on_plenty, width=10, text='Year Plenty')
+
+        self.knight_button.grid(row=0, column=0)
+        self.monopoly_button.grid(row=0, column=1)
+        self.road_builder_button.grid(row=1, column=0)
+        self.plenty_button.grid(row=1, column=1)
+
+        self.monopoly_frame = MonopolyFrame(self, self.game)
+        #self.monopoly_frame.pack()
+
+        self.plenty_frame = YearPlentyFrame(self, self.game)
+        #self.plenty_frame.pack()
+
+    def notify(self, observable):
+        self.set_states()
+
+    def set_states(self):
+        self.knight_button.configure(state=tk_status[self.game.state.can_play_knight()])
+        self.monopoly_button.configure(state=tk_status[self.game.state.can_play_monopoly()])
+        self.road_builder_button.configure(state=tk_status[self.game.state.can_play_road_builder()])
+        self.plenty_button.configure(state=tk_status[self.game.state.can_play_plenty()])
+
+    def on_knight(self):
+        self.game.play_knight()
+        self.set_states()
+
+    def on_monopoly(self):
+        self.game.state.set_state(GameStates.MONOPOLY)
+        self.monopoly_frame.pack()
+        self.set_states()
+
+    def on_road_builder(self):
+        self.game.play_road_builder()
+        self.set_states()
+
+    def on_plenty(self):
+        self.game.state.set_state(GameStates.PLENTY)
+        self.plenty_frame.pack()
+        self.set_states()
+
+    def clear_dynamic(self):
+        self.monopoly_frame.pack_forget()
+        self.plenty_frame.pack_forget()
+
+class MonopolyFrame(tk.Frame):
+    def __init__(self, master, game):
+        super().__init__(master)
+        self.master = master
+        self.game = game
+
+        self._resource = None
+
+        self.wheat_button = tk.Checkbutton(self, command=self.on_wheat, text='Wheat')
+        self.wood_button = tk.Checkbutton(self, command=self.on_wood, text='Wood')
+        self.sheep_button = tk.Checkbutton(self, command=self.on_sheep, text='Sheep')
+        self.brick_button = tk.Checkbutton(self, command=self.on_brick, text='Brick')
+        self.ore_button = tk.Checkbutton(self, command=self.on_ore, text='Ore')
+        self.confirm_button = tk.Button(self, command=self.on_confirm, text='Confirm')
+
+        self.wheat_button.grid(row=0, column=0)
+        self.wood_button.grid(row=0, column=1)
+        self.sheep_button.grid(row=0, column=2)
+        self.brick_button.grid(row=1, column=0)
+        self.ore_button.grid(row=1, column=1)
+        self.confirm_button.grid(row=2, column=0)
+
+    def on_wheat(self):
+        self._resource = 'WHEAT'
+        self.wood_button.set(0)
+        self.sheep_button.set(0)
+        self.brick_button.set(0)
+        self.ore_button.set(0)
+
+    def on_wood(self):
+        self._resource = 'WOOD'
+        self.wheat_button.set(0)
+        self.sheep_button.set(0)
+        self.brick_button.set(0)
+        self.ore_button.set(0)
+
+    def on_sheep(self):
+        self._resource = 'SHEEP'
+        self.wheat_button.set(0)
+        self.wood_button.set(0)
+        self.brick_button.set(0)
+        self.ore_button.set(0)
+
+    def on_brick(self):
+        self._resource = 'BRICK'
+        self.wheat_button.set(0)
+        self.wood_button.set(0)
+        self.sheep_button.set(0)
+        self.ore_button.set(0)
+
+    def on_ore(self):
+        self._resource = 'ORE'
+        self.wheat_button.set(0)
+        self.wood_button.set(0)
+        self.sheep_button.set(0)
+        self.brick_button.set(0)
+
+    def on_confirm(self):
+        self.game.state.set_state(GameStates.INGAME)
+        self.game.play_monopoly(ResourceCards(self._resource))
+        self.master.clear_dynamic()
+
+class YearPlentyFrame(tk.Frame):
+    def __init__(self, master, game):
+        super().__init__(master)
+        self.master = master
+        self.game = game
+
+        self._resource_1 = None
+        self._resource_2 = None
+
+        self.wheat_button = tk.Checkbutton(self, command=self.on_wheat, text='Wheat')
+        self.wood_button = tk.Checkbutton(self, command=self.on_wood, text='Wood')
+        self.sheep_button = tk.Checkbutton(self, command=self.on_sheep, text='Sheep')
+        self.brick_button = tk.Checkbutton(self, command=self.on_brick, text='Brick')
+        self.ore_button = tk.Checkbutton(self, command=self.on_ore, text='Ore')
+        self.confirm_button = tk.Button(self, command=self.on_confirm, text='Confirm')
+
+    def set_states(self):
+        if self._resource_1 and self._resource_2:
+            if 'WOOD' not in [self._resource_1, self._resource_2]:
+                self.wood_button.configure(state='disabled')
+            if 'WHEAT' not in [self._resource_1, self._resource_2]:
+                self.wheat_button.configure(state='disabled')
+            if 'SHEEP' not in [self._resource_1, self._resource_2]:
+                self.wood_button.configure(state='disabled')
+            if 'BRICK' not in [self._resource_1, self._resource_2]:
+                self.sheep_button.configure(state='disabled')
+            if 'ORE' not in [self._resource_1, self._resource_2]:
+                self.brick_button.configure(state='disabled')
+        else:
+            self.wood_button.configure(state='enabled')
+            self.wheat_button.configure(state='enabled')
+            self.sheep_button.configure(state='enabled')
+            self.brick_button.configure(state='enabled')
+            self.ore_button.configure(state='enabled')
+    
+    def on_wheat(self):
+        self._resource = 'WHEAT'
+        self.set_states()
+
+    def on_wood(self):
+        self._resource = 'WOOD'
+        self.set_states()
+
+    def on_sheep(self):
+        self._resource = 'SHEEP'
+        self.set_states()
+
+    def on_brick(self):
+        self._resource = 'BRICK'
+        self.set_states()
+
+    def on_ore(self):
+        self._resource = 'ORE'
+        self.set_states()
+
+    def on_confirm(self):
+        self.game.state.set_state(GameStates.INGAME)
+        pickup_list = []
+        if self._resource_1 == self._resource_2:
+            pickup_list.append((ResourceCards(self._resource_1), 2))
+        else:
+            pickup_list.append((ResourceCards(self._resource_1), 1))
+            pickup_list.append((ResourceCards(self._resource_2), 1))
+
+        self.game.play_year_plenty(pickup_list)
+        self.master.clear_dynamic()
+
+class DiscardFrame(tk.LabelFrame):
+    def __init__(self, master, game):
+        super().__init__(master, text='Discard')
+        self.master = master
+        self.game = game
+
+        cur_player = self.game.current_player
+
+        self.entry_frame = tk.Frame(self)
+        self.entry_frame.pack()
+    
+        self.wheat_label = tk.Label(self.entry_frame, text='Wheat')
+        self.wheat_entry = tk.Spinbox(self.entry_frame, from_=0, to=cur_player.count_resource_cards(ResourceCards.WHEAT))
+
+        self.wheat_label.grid(row=0, column=0)
+        self.wheat_entry.grid(row=0, column=1)
+
+        self.wood_label = tk.Label(self.entry_frame, text='Wood')
+        self.wood_entry = tk.Spinbox(self.entry_frame, from_=0, to=cur_player.count_resource_cards(ResourceCards.WOOD))
+
+        self.wood_label.grid(row=1, column=0)
+        self.wood_entry.grid(row=1, column=1)
+
+        self.sheep_label = tk.Label(self.entry_frame, text='Sheep')
+        self.sheep_entry = tk.Spinbox(self.entry_frame, from_=0, to=cur_player.count_resource_cards(ResourceCards.SHEEP))
+
+        self.sheep_label.grid(row=2, column=0)
+        self.sheep_entry.grid(row=2, column=1)
+
+        self.brick_label = tk.Label(self.entry_frame, text='Brick')
+        self.brick_entry = tk.Spinbox(self.entry_frame, from_=0, to=cur_player.count_resource_cards(ResourceCards.BRICK))
+
+        self.brick_label.grid(row=3, column=0)
+        self.brick_entry.grid(row=3, column=1)
+
+        self.ore_label = tk.Label(self.entry_frame, text='Ore')
+        self.ore_entry = tk.Spinbox(self.entry_frame, from_=0, to=cur_player.count_resource_cards(ResourceCards.ORE))
+
+        self.ore_label.grid(row=4, column=0)
+        self.ore_entry.grid(row=4, column=1)
+
+        self.confirm_button = tk.Button(self, command=self.on_confirm, text='Confirm')
+        self.confirm_button.pack()
+
+    def on_confirm(self):
+        wheat = self.wheat_entry.get()
+        wood = self.wood_entry.get()
+        sheep = self.sheep_entry.get()
+        brick = self.brick_entry.get()
+        ore = self.ore_entry.get()
+
+        discard_list = []
+        if wheat > 0:
+            discard_list.append(('WHEAT', wheat))
+        if wood > 0:
+            discard_list.append(('WOOD', wood))
+        if sheep > 0:
+            discard_list.append(('SHEEP', sheep))
+        if brick > 0:
+            discard_list.append(('BRICK', brick))
+        if ore > 0:
+            discard_list.append(('ORE', ore))
+
+        self.game.discard(discard_list)
+
+class StealFrame(tk.LabelFrame):
+    def __init__(self, master, game):
+        super().__init__(master, text='Pick a player to steal from')
+        self.master = master
+        self.game = game
+
+        players = self.game.players_to_steal_from
+        for p in players:
+            b = tk.Button(self, command=lambda I=p.identifier: self.on_button(I), width=10, text=str(p))
+            b.pack()
+
+    def on_button(self, player_id: int):
+        self.game.steal(player_id)
+
+class TradingFrame(tk.LabelFrame):
+    def __init__(self, master, game):
+        super().__init__(master, text='Trade')
+        self.master = master
+        self.game = game
+
+        cur_player = self.game.current_player
+
+        self.give_entry_frame = tk.LabelFrame(self, text='Give')
+        self.give_entry_frame.pack()
+    
+        self.wheat_give_label = tk.Label(self.give_entry_frame, text='Wheat')
+        self.wheat_give_entry = tk.Spinbox(self.give_entry_frame, from_=0, to=cur_player.count_resource_cards(ResourceCards.WHEAT))
+        self.wheat_give_label.grid(row=0, column=0)
+        self.wheat_give_entry.grid(row=0, column=1)
+
+        self.wood_give_label = tk.Label(self.give_entry_frame, text='Wood')
+        self.wood_give_entry = tk.Spinbox(self.give_entry_frame, from_=0, to=cur_player.count_resource_cards(ResourceCards.WOOD))
+        self.wood_give_label.grid(row=1, column=0)
+        self.wood_give_entry.grid(row=1, column=1)
+
+        self.sheep_give_label = tk.Label(self.give_entry_frame, text='Sheep')
+        self.sheep_give_entry = tk.Spinbox(self.give_entry_frame, from_=0, to=cur_player.count_resource_cards(ResourceCards.SHEEP))
+        self.sheep_give_label.grid(row=2, column=0)
+        self.sheep_give_entry.grid(row=2, column=1)
+
+        self.brick_give_label = tk.Label(self.give_entry_frame, text='Brick')
+        self.brick_give_entry = tk.Spinbox(self.give_entry_frame, from_=0, to=cur_player.count_resource_cards(ResourceCards.BRICK))
+        self.brick_give_label.grid(row=3, column=0)
+        self.brick_give_entry.grid(row=3, column=1)
+
+        self.ore_give_label = tk.Label(self.give_entry_frame, text='Ore')
+        self.ore_give_entry = tk.Spinbox(self.give_entry_frame, from_=0, to=cur_player.count_resource_cards(ResourceCards.ORE))
+        self.ore_give_label.grid(row=4, column=0)
+        self.ore_give_entry.grid(row=4, column=1)
+
+        self.recieve_entry_frame = tk.LabelFrame(self, text='Recieve')
+        self.recieve_entry_frame.pack()
+    
+        self.wheat_recieve_label = tk.Label(self.recieve_entry_frame, text='Wheat')
+        self.wheat_recieve_entry = tk.Spinbox(self.recieve_entry_frame, from_=0, to=4)
+        self.wheat_recieve_label.grid(row=0, column=2)
+        self.wheat_recieve_entry.grid(row=0, column=3)
+
+        self.wood_recieve_label = tk.Label(self.recieve_entry_frame, text='Wood')
+        self.wood_recieve_entry = tk.Spinbox(self.recieve_entry_frame, from_=0, to=4)
+        self.wood_recieve_label.grid(row=1, column=2)
+        self.wood_recieve_entry.grid(row=1, column=3)
+
+        self.sheep_recieve_label = tk.Label(self.recieve_entry_frame, text='Sheep')
+        self.sheep_recieve_entry = tk.Spinbox(self.recieve_entry_frame, from_=0, to=4)
+        self.sheep_recieve_label.grid(row=2, column=2)
+        self.sheep_recieve_entry.grid(row=2, column=3)
+
+        self.brick_recieve_label = tk.Label(self.recieve_entry_frame, text='Brick')
+        self.brick_recieve_entry = tk.Spinbox(self.recieve_entry_frame, from_=0, to=4)
+        self.brick_recieve_label.grid(row=3, column=2)
+        self.brick_recieve_entry.grid(row=3, column=3)
+
+        self.ore_recieve_label = tk.Label(self.recieve_entry_frame, text='Ore')
+        self.ore_recieve_entry = tk.Spinbox(self.recieve_entry_frame, from_=0, to=4)
+        self.ore_recieve_label.grid(row=4, column=2)
+        self.ore_recieve_entry.grid(row=4, column=3)
+
+        self.confirm_button = tk.Button(self, command=self.on_confirm, text='Offer Trade')
+        self.confirm_button.pack()
+
+    def on_confirm(self):
+        pass
