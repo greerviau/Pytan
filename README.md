@@ -64,6 +64,7 @@ if __name__ == '__main__':
 ```
 
 ## TODO
+* Seperate Game States and UI States
 * Complete Core Gameplay Logic
 * Complete State Management
 * Complete GUI
