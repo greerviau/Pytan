@@ -1,6 +1,12 @@
 import math
 import tkinter
 
+def try_parse_int(string: str) -> int:
+    try:
+        return int(string)
+    except:
+        return 0
+
 def rotate_2poly(angle, coords, origin):
     """
     Rotates a list of 2D coords about the origin.
@@ -55,24 +61,6 @@ def rotate_point(angle, point, origin):
     return (origin[0] + (cosT * (point[0] - origin[0]) - sinT * (point[1] - origin[1])),
             origin[1] + (sinT * (point[0] - origin[0]) + cosT * (point[1] - origin[1])))
 
-
-def hexagon_points(radius, center, rotate):
-    """
-    Computes the (x,y) points of a hexagon with the given properties.
-    :param radius: radius of the hexagon
-    :param center: (x,y) pair, the center of the hexagon
-    :param rotate: degrees the hexagon is rotated. 0 -> flat top, 30 -> pointed top
-    :return:
-    """
-    center_x, center_y = center
-    points = []
-    for theta in (60 * n for n in range(6)):
-        x = (math.cos(math.radians(theta + rotate)) * radius) + center_x
-        y = (math.sin(math.radians(theta + rotate)) * radius) + center_y
-        points += [x, y]
-    return points
-
-
 def circle_bbox(radius, center):
     """
     Computes the bounding box (upper-left, bottom-right) of a circle
@@ -83,12 +71,3 @@ def circle_bbox(radius, center):
     x, y = center
     return [[x-radius, y-radius],
             [x+radius, y+radius]]
-
-
-def refresh_option_menu(option_menu, var, new_options):
-    """http://stackoverflow.com/a/17581364/1817465"""
-    option_menu['menu'].delete(0, 'end')
-
-    # Insert list of new options (tk._setit hooks them up to var)
-    for choice in new_options:
-        option_menu['menu'].add_command(label=choice, command=tkinter._setit(var, choice))
