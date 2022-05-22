@@ -67,11 +67,11 @@ if __name__ == '__main__':
 ```
 
 ## TODO
-[x] Seperate Game States and UI States
-[ ] Complete Core Gameplay Logic
-[x] Complete State Management
-[x] Complete GUI
-[ ] Build GYM Environment for RL
+- [x] Seperate Game States and UI States
+- [ ] Complete Core Gameplay Logic
+- [x] Complete State Management
+- [x] Complete GUI
+- [ ] Build GYM Environment for RL
 
 ## References
 Shoutout to [rosshamish](https://github.com/rosshamish) for building some very usefull Catan projects that I referenced to help build this project. None of these were utilized directly because some features were out of date (and I wanted to build it myself anyway), but they were super helpful in understanding some of the underlying logic in building Catan.
