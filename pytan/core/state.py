@@ -8,13 +8,12 @@ class GameStates(Enum):
     BUILDING_ROAD = 'BUILDING_ROAD'
     BUILDING_SETTLEMENT = 'BUILDING_SETTLEMENT'
     BUILDING_CITY = 'BUILDING_CITY'
-    TRADING = 'TRADING'
+    ACCEPTING_TRADE = 'ACCEPTING_TRADE'
+    CONFIRMING_TRADE = 'CONFIRMING_TRADE'
     DISCARDING = 'DISCARDING'
     MOVING_ROBBER = 'MOVING_ROBBER'
     STEALING = 'STEALING'
     ROADBUILDER = 'ROADBUILDER'
-    MONOPOLY = 'MONOPOLY'
-    PLENTY = 'PLENTY'
 
 class CatanGameState(object):
     def __init__(self, game: 'Game'):
@@ -39,9 +38,9 @@ class CatanGameState(object):
 
     def can_build_road(self, log=False) -> bool:
         if self.game_has_started():
-            if self._state in [GameStates.INGAME, GameStates.BUILDING_ROAD]:
+            if self._state in [GameStates.INGAME, GameStates.ROADBUILDER]:
                 if not self.can_roll():
-                    if self._game.current_player.can_buy_road():
+                    if self._game.current_player.can_buy_road() or self._game.free_roads > 0:
                         if self._game.current_player.roads_left > 0:
                             if any(self._game.legal_road_placements()):
                                 return True
@@ -61,7 +60,7 @@ class CatanGameState(object):
 
     def can_build_settlement(self, log=False) -> bool:
         if self.game_has_started():
-            if self._state in [GameStates.INGAME, GameStates.BUILDING_SETTLEMENT]:
+            if self._state == GameStates.INGAME:
                 if not self.can_roll():
                     if self._game.current_player.can_buy_settlement():
                         if self._game.current_player.settlements_left > 0:
@@ -83,7 +82,7 @@ class CatanGameState(object):
 
     def can_build_city(self, log=False) -> bool:
         if self.game_has_started():
-            if self._state in [GameStates.INGAME, GameStates.BUILDING_CITY]:
+            if self._state == GameStates.INGAME:
                 if not self.can_roll():
                     if self._game.current_player.can_buy_city():
                         if self._game.current_player.cities_left > 0:
@@ -105,15 +104,6 @@ class CatanGameState(object):
         elif log:
             self.log('Game has not started')
         return False
-    
-    def is_building_road(self, log=False) -> bool:
-        return self._state in [GameStates.STARTING_ROAD, GameStates.BUILDING_ROAD]
-
-    def is_building_settlement(self, log=False) -> bool:
-        return self._state in [GameStates.STARTING_SETTLEMENT, GameStates.BUILDING_SETTLEMENT]
-    
-    def is_building_city(self, log=False) -> bool:
-        return self._state == GameStates.BUILDING_CITY
 
     def can_roll(self, log=False) -> bool:
         if self.game_has_started():
@@ -177,6 +167,31 @@ class CatanGameState(object):
             self.log('Game has not started')
         return False
 
+    def can_accept_decline_trade(self, log=False) -> bool:
+        if self.game_has_started():
+            if self._state == GameStates.ACCEPTING_TRADE:
+                if not self.can_roll():
+                    return True
+                elif log:
+                    self.log('Roll first')
+            elif log:
+                self.log(f'Cant trade, current state {self._state}')
+        elif log:
+            self.log('Game has not started')
+        return False
+    
+    def can_confirm_trade(self, log=False) -> bool:
+        if self.game_has_started():
+            if self._state == GameStates.CONFIRMING_TRADE:
+                if not self.can_roll():
+                    return True
+                elif log:
+                    self.log('Roll first')
+            elif log:
+                self.log(f'Cant trade, current state {self._state}')
+        elif log:
+            self.log('Game has not started')
+        return False
 
     def can_buy_dev_card(self, log=False) -> bool:
         if self.game_has_started():
@@ -256,7 +271,7 @@ class CatanGameState(object):
         return False
 
 
-    def can_play_plenty(self, log=False) -> bool:
+    def can_play_year_plenty(self, log=False) -> bool:
         if self.game_has_started():
             if self._state == GameStates.INGAME:
                 if not self.can_roll():
