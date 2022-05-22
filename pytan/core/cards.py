@@ -16,18 +16,18 @@ RESOURCE_CARD_COUNTS = {
 }
 
 class DevCards(Enum):
-    VP = 'VP'
+    VICTORY_POINT = 'VICTORY_POINT'
     KNIGHT = 'KNIGHT'
     MONOPOLY = 'MONOPOLY'
-    ROADBUILD = 'ROADBUILD'
-    PLENTY = 'PLENTY'
+    ROADBUILDER = 'ROADBUILDER'
+    YEAR_PLENTY = 'YEAR_PLENTY'
 
 DEV_CARD_COUNTS = {
-    DevCards.VP: 5,
+    DevCards.VICTORY_POINT: 5,
     DevCards.KNIGHT: 14,
     DevCards.MONOPOLY: 2,
-    DevCards.ROADBUILD: 2,
-    DevCards.PLENTY: 2
+    DevCards.ROADBUILDER: 2,
+    DevCards.YEAR_PLENTY: 2
 }
 
 ROAD = [(ResourceCards.WOOD, 1), (ResourceCards.BRICK, 1)]

@@ -165,6 +165,15 @@ class Board(hexmesh.HexMesh):
     def robber(self) -> Piece:
         return self._robber
 
+    def is_player_on_port(self, player_id: int, port_type: PortTypes) -> bool:
+        for port in self._ports.values():
+            if port.port_type == port_type:
+                p1 = self._nodes[port.coord_1]
+                p2 = self._nodes[port.coord_2]
+                if (type(p1) == Piece and p1.owner_id == player_id) or (type(p2) == Piece and p2.owner_id == player_id):
+                    return True
+        return False
+
     def legal_robber_placements(self) -> list[int]:
         return [coord for coord, tile in self._tiles.items() if coord != self._robber.coord]
 

@@ -13,7 +13,11 @@ class Player(object):
         self._cities = 0
 
         self._vps = 0
+
         self._knights_played = 0
+
+        self._largest_army = False
+        self._longest_road = False
 
         self._last_road_built = 0x00
         self._last_settlement_built = 0x00
@@ -73,11 +77,23 @@ class Player(object):
 
     @property
     def victory_points(self) -> int:
-        return self._vps
+        return self.settlements + (self._cities * 2) + (self._largest_army * 2) + (self._longest_road * 2)
+
+    @property
+    def total_victory_points(self) -> int:
+        return self.victory_points + self._vps
 
     @property
     def knights_played(self) -> int:
         return self._knights_played
+
+    @property
+    def largest_army(self) -> bool:
+        return self._largest_army
+
+    @property
+    def longest_road(self) -> bool:
+        return self._longest_road
         
     @property
     def last_road_built(self) -> int:
@@ -91,6 +107,14 @@ class Player(object):
     def last_city_built(self) -> int:
         return self._last_city_built
 
+    @largest_army.setter
+    def largest_army(self, b):
+        self._largest_army = b
+
+    @longest_road.setter
+    def longest_road(self, b):
+        self._longest_road = b
+
     def count_resource_cards(self, card: ResourceCards) -> int:
         return self._resource_cards.count(card)
 
@@ -103,16 +127,30 @@ class Player(object):
                 self._resource_cards.append(card)
 
     def remove_resource_card(self, card: ResourceCards):
-        self._resource_cards.remove(card)
+        try:
+            self._resource_cards.remove(card)
+        except ValueError:
+            pass
+
+    def remove_all_resource_card(self, card: ResourceCards) -> int:
+        og_len = len(self._resource_cards)
+        self._resource_cards = [c for c in self._resource_cards if c != card]
+        return og_len - len(self._resource_cards)
 
     def remove_resource_cards(self, cards: list[tuple[ResourceCards, int]]):
         for card, n in cards:
             for _ in range(n):
-                self._resource_cards.remove(card)
+                self.remove_resource_card(card)
 
     def are_cards_in_hand(self, cards_needed: tuple[ResourceCards, int]) -> bool:
-        for card, n in cards_needed:
-            if self._resource_cards.count(card) < n:
+        card, n = cards_needed
+        if self._resource_cards.count(card) < n:
+            return False
+        return True
+
+    def are_multiple_cards_in_hand(self, cards_needed: list[tuple[ResourceCards, int]]) -> bool:
+        for c in cards_needed:
+            if not self.are_cards_in_hand(c):
                 return False
         return True
 
@@ -124,12 +162,14 @@ class Player(object):
         return count
 
     def can_buy_dev_card(self) -> bool:
-        return self.are_cards_in_hand(DEV_CARD)
+        return self.are_multiple_cards_in_hand(DEV_CARD)
 
     def buy_dev_card(self, dev_card: DevCards, turn_bought: int):
         if self.can_buy_dev_card():
             self.remove_resource_cards(DEV_CARD)
             self._dev_cards.append((dev_card, turn_bought))
+            if dev_card == DevCards.VICTORY_POINT:
+                self._vps += 1
 
     def remove_dev_card(self, dev_card: DevCards):
         for card, turn in self._dev_cards:
@@ -140,21 +180,21 @@ class Player(object):
             self._knights_played += 1
 
     def can_buy_road(self) -> bool:
-        return self.are_cards_in_hand(ROAD)
+        return self.are_multiple_cards_in_hand(ROAD)
 
     def add_road(self, coord: int):
         self._last_road_built = coord
         self._roads += 1
 
     def can_buy_settlement(self) -> bool:
-        return self.are_cards_in_hand(SETTLEMENT)
+        return self.are_multiple_cards_in_hand(SETTLEMENT)
 
     def add_settlement(self, coord: int):
         self._last_settlement_built = coord
         self._settlements += 1
 
     def can_buy_city(self) -> bool:
-        return self.are_cards_in_hand(CITY)
+        return self.are_multiple_cards_in_hand(CITY)
 
     def add_city(self, coord: int):
         self._last_city_built = coord
@@ -181,7 +221,7 @@ class Player(object):
 
     def can_play_plenty(self, turn: int) -> bool:
         for card, t in self._dev_cards:
-            if card == DevCards.PLENTY and t < turn:
+            if card == DevCards.YEAR_PLENTY and t < turn:
                 return True
         return False
 

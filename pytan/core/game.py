@@ -3,6 +3,7 @@ from pytan.core.piece import Piece, PieceTypes
 from pytan.core.player import Player
 from pytan.core.cards import *
 from pytan.core.state import GameStates, CatanGameState
+from pytan.core.trading import PortTypes, PORT_TO_RESOURCE
 import random
 from datetime import datetime
 import os
@@ -54,10 +55,17 @@ class Game(object):
         self._current_player = self._players[self._current_player_idx]
         self._discarding_players = []
         self._players_to_steal_from = []
+        self._players_accepting_trade = []
+        self._players_accepted_trade = []
+
+        self._give_trade = []
+        self._want_trade = []
         
         self._current_roll = 0
         self._last_roll = 0
         self._has_rolled = False
+
+        self._free_roads = 0
 
         self._longest_road = None
         self._largest_army = None
@@ -130,7 +138,11 @@ class Game(object):
 
     @property
     def current_player(self) -> Player:
-        return self._current_player if not any(self._discarding_players) else self._discarding_players[0]
+        return self._discarding_players[0] if any(self._discarding_players) else self._players_accepting_trade[0] if any(self._players_accepting_trade) else self._current_player
+
+    @property
+    def other_players(self) -> list[Player]:
+        return [player for player in self._players if player.identifier != self._current_player.identifier]
 
     @property
     def discarding_players(self) -> list[Player]:
@@ -139,6 +151,10 @@ class Game(object):
     @property
     def players_to_steal_from(self) -> list[Player]:
         return self._players_to_steal_from
+
+    @property
+    def players_accepted_trade(self) -> list[Player]:
+        return self._players_accepted_trade
 
     @property
     def current_rol(self) -> int:
@@ -151,6 +167,10 @@ class Game(object):
     @property
     def has_rolled(self) -> bool:
         return self._has_rolled
+
+    @property
+    def free_roads(self) -> int:
+        return self._free_roads
 
     @property
     def longest_road(self) -> Player:
@@ -236,17 +256,20 @@ class Game(object):
             player.add_resource_cards(pickup_list)
             self._remove_resources(pickup_list)
 
+    '''
     def discard(self, resource_list: list[tuple[str, int]]):
         new_resource_list = []
         for card, n in resource_list:
             new_resource_list.append((ResourceCards(card), n))
         self.discard(new_resource_list)
+    '''
 
     def discard(self, resource_list: list[tuple[ResourceCards, int]]):
         if self._game_state.can_discard(log=True):
             player = self._discarding_players[0]
             d = player.n_resource_cards // 2
-            if len(resource_list) > d:
+            d_sum = sum([n for card, n in resource_list])
+            if d_sum > d:
                 self.log(f'Too many resource cards to discard, discard {d} cards')
             else:
                 self._discarding_players.pop(0)
@@ -254,7 +277,7 @@ class Game(object):
                 self._add_resources(resource_list)
                 s = f'{player} discarded '
                 for card, n in resource_list:
-                    s += f'{n}x{card.value} '
+                    s += f'{n} {card.value} '
                 self.log(s)
                 if len(self._discarding_players) == 0:
                     self._game_state.set_state(GameStates.MOVING_ROBBER)
@@ -319,15 +342,6 @@ class Game(object):
         if self._game_state.can_pass_turn(log=True):
             self._pass_turn()
 
-    def start_building(self, piece_type: PieceTypes):
-        if piece_type == PieceTypes.ROAD:
-            self._game_state.set_state(GameStates.BUILDING_ROAD)
-        elif piece_type == PieceTypes.SETTLEMENT:
-            self._game_state.set_state(GameStates.BUILDING_SETTLEMENT)
-        elif piece_type == PieceTypes.CITY:
-            self._game_state.set_state(GameStates.BUILDING_CITY)
-        self.notify()
-
     def legal_road_placements(self) -> list[int]:
         if self._game_state == GameStates.STARTING_ROAD:
             return self._board.node_neighboring_edges(self._current_player.last_settlement_built)
@@ -357,9 +371,13 @@ class Game(object):
         elif self._game_state.can_build_road(log=True):
             road = self._build_road(coord)
             if road is not None:
-                self._current_player.remove_resource_cards(ROAD)
-                self._add_resources(ROAD)
-            self._game_state.set_state(GameStates.INGAME)
+                if self._free_roads == 0:
+                    self._current_player.remove_resource_cards(ROAD)
+                    self._add_resources(ROAD)
+                else:
+                    self._free_roads -= 1
+                if self._free_roads == 0:
+                    self._game_state.set_state(GameStates.INGAME)
                         
         self.notify()
 
@@ -438,9 +456,10 @@ class Game(object):
     def move_robber(self, tile_coord: int):
         if self._game_state.is_moving_robber(log=True):
             self._board.move_robber(tile_coord)
-            players = [p for p in self._board.players_on_tile(tile_coord) if any(p.resource_cards)]
+            players = [p for p in self._board.players_on_tile(tile_coord) if any(p.resource_cards) and p.identifier != self._current_player.identifier]
             if len(players) == 1:
                 self._game_state.set_state(GameStates.STEALING)
+                self._players_to_steal_from = players
                 self.steal(players[0].identifier)
             elif any(players):
                 self._game_state.set_state(GameStates.STEALING)
@@ -460,6 +479,7 @@ class Game(object):
                     player_to_steal.remove_resource_card(card)
                     self._current_player.add_resource_card(card)
                     self.log(f'{self._current_player} stole a {card.value} from {player_to_steal}')
+                    self._players_to_steal_from = []
                     self._game_state.set_state(GameStates.INGAME)
                 else:
                     self.log(f'{player_to_steal} has no cards to steal')
@@ -467,35 +487,173 @@ class Game(object):
                 self.log(f'Cant steal from {player_to_steal}')
 
         self.notify()
+    '''
+    def offer_trade(self, giving: list[tuple[str, int]], wanting: list[tuple[str, int]], players: list[int]):
+        give_list = []
+        for card, n in giving:
+            give_list.append((ResourceCards(card), n))
+        want_list = []
+        for card, n in wanting:
+            want_list.append((ResourceCards(card), n))
+        self.offer_trade(give_list, want_list, players)
+    '''
+    def offer_trade(self, giving: list[tuple[ResourceCards, int]], wanting: list[tuple[ResourceCards, int]], players: list[int]):
+        if self._game_state.can_trade(log=True):
+            if self._current_player.are_multiple_cards_in_hand(giving):
+                if any(wanting):
+                    if len(giving) == 1 and len(wanting) == 1 and not any(players):
+                        give_card, give_n = giving[0]
+                        want_card, want_n = wanting[0]
+                        if give_n == 4 and want_n == 1:
+                            self._current_player.remove_resource_cards(giving)
+                            self._current_player.add_resource_card(want_card)
+                            self._add_resources(giving)
+                            self._remove_resources(wanting)
+                            self.log(f'{self._current_player} traded 4 {give_card.value} for a {want_card.value}')
+                            self.notify()
+                            return
+                        if self.board.is_player_on_port(self._current_player.identifier, PortTypes(give_card.value)) and give_n == 2 and want_n == 1:
+                            self._current_player.remove_resource_cards(giving)
+                            self._current_player.add_resource_card(want_card)
+                            self._add_resources(giving)
+                            self._remove_resources(wanting)
+                            self.log(f'{self._current_player} traded 2 {give_card.value} for a {want_card.value}')
+                            self.notify()
+                            return
+                        elif self.board.is_player_on_port(self._current_player.identifier, PortTypes.ANY) and give_n == 3 and want_n == 1:
+                            self._current_player.remove_resource_cards(giving)
+                            self._current_player.add_resource_card(want_card)
+                            self._add_resources(giving)
+                            self._remove_resources(wanting)
+                            self.log(f'{self._current_player} traded 3 {give_card.value} for a {want_card.value}')
+                            self.notify()
+                            return
+                    
+                    if any(players):
+                        s = f'{self._current_player} wants to trade '
+                        for c, n in giving:
+                            s += f'{n} {c.value} '
+                        s += 'for '
+                        for c, n in wanting:
+                            s += f'{n} {c.value} '
+                        self.log(s)
+                        
+                        for p_id in players:
+                            player = self.get_player_by_id(p_id)
+                            if player.are_multiple_cards_in_hand(wanting):
+                                self._players_accepting_trade.append(player)
+                            else:
+                                self.log(f'{player} does not have the cards to trade')
+                        if any(self._players_accepting_trade):
+                            self.log(f'{self._players_accepting_trade[0]} accept or decline trade?')
+                            self._give_trade = giving
+                            self._want_trade = wanting
+                            self._game_state.set_state(GameStates.ACCEPTING_TRADE)
+                        else:
+                            self.log('No players have the requested card')
+                    else:
+                        self.log('Specify players to trade with')
+                else:
+                    self.log('Specify cards to trade for')
+            else:
+                self.log(f'{self._current_player} does not have specified cards to trade')
+        self.notify()
+
+    def accept_trade(self):
+        if self._game_state.can_accept_decline_trade(log=True):
+            p = self._players_accepting_trade.pop(0)
+            self._players_accepted_trade.append(p)
+            if not any(self._players_accepting_trade):
+                self._game_state.set_state(GameStates.CONFIRMING_TRADE)
+            else:
+                self.log(f'{self._players_accepting_trade[0]} accept or decline trade?')
+            
+        self.notify()
+
+    def decline_trade(self):
+        if self._game_state.can_accept_decline_trade(log=True):
+            p = self._players_accepting_trade.pop(0)
+            if not any(self._players_accepting_trade):
+                self._game_state.set_state(GameStates.CONFIRMING_TRADE)
+            else:
+                self.log(f'{self._players_accepting_trade[0]} accept or decline trade?')
+        self.notify()
+
+    def confirm_trade(self, player_id: int):
+        if self._game_state.can_confirm_trade(log=True):
+            player = self.get_player_by_id(player_id)
+            if player_id in [p.identifier for p in self._players_accepted_trade]:
+                self._current_player.remove_resource_cards(self._give_trade)
+                self._current_player.add_resource_cards(self._want_trade)
+                player.remove_resource_cards(self._want_trade)
+                player.add_resource_cards(self._give_trade)
+
+                s = f'{self._current_player} traded '
+                for c, n in self._want_trade:
+                    s += f'{n} {c.value} '
+                s += f'to {player} for '
+                for c, n in self._give_trade:
+                    s += f'{n} {c.value} '
+                self.log(s)
+
+                self._game_state.set_state(GameStates.INGAME)
+                self._want_trade = []
+                self._give_trade = []
+                self._players_accepted_trade = []
+            else:
+                self.log(f'Cannot trade with {player}')
+        self.notify()
 
     def play_knight(self):
         if self._game_state.can_play_knight(log=True):
             self.log(f'{self._current_player} played a Knight')
             self._game_state.set_state(GameStates.MOVING_ROBBER)
             self._current_player.remove_dev_card(DevCards.KNIGHT)
+            if self._largest_army is None and self._current_player.knights_played == 3:
+                self._largest_army = self._current_player
+                self._current_player.largest_army = True
+                self.log(f'{self._current_player} has the Largest Army')
         self.notify()
 
     def play_monopoly(self, resource_card: ResourceCards):
         if self._game_state.can_play_monopoly(log=True):
-            pass
+            self.log(f'{self._current_player} played Monopoly on {resource_card.value}')
+            self._current_player.remove_dev_card(DevCards.MONOPOLY)
+            removed = 0
+            for player in self.other_players:
+                removed += player.remove_all_resource_card(resource_card)
+                if not removed:
+                    self.log(f'{player} payed {self._current_player} {removed} {resource_card.value} due to Monopoly')
+            self._current_player.add_resource_cards([(resource_card, removed)])
         self.notify()
 
     def play_road_builder(self):
         if self._game_state.can_play_road_builder(log=True):
-            pass
+            self._game_state.set_state(GameStates.ROADBUILDER)
+            self._free_roads = 2
+            self.log(f'{self._current_player} played Road Builder, build 2 roads for free')
+            self._current_player.remove_dev_card(DevCards.ROADBUILDER)
         self.notify()
 
     def play_year_plenty(self, pickup_list: list[tuple[ResourceCards, int]]):
-        if self._game_state.can_play_plenty(log=True):
-            pass
+        if self._game_state.can_play_year_plenty(log=True):
+            count = 0
+            cards = []
+            for card, n in pickup_list:
+                cards.append(card)
+                count += n
+            if count > 2 or count < 2:
+                self.log(f'Cannot pickup {count} cards with Year of Plenty, choose 2')
+            else:
+                self._current_player.add_resource_cards(pickup_list)
+                self._remove_resources(pickup_list)
+                self._current_player.remove_dev_card(DevCards.YEAR_PLENTY)
+                if len(cards) == 1:
+                    self.log(f'{self._current_player} played Year of Plenty, picked up 2 {cards[0].value}')
+                else:
+                    self.log(f'{self._current_player} played Year of Plenty, picked up a {cards[0].value} and a {cards[1].value}')
+
         self.notify()
-
-    def trade(self, giving: list[tuple[ResourceCards, int]], wanting: list[tuple[ResourceCards, int]], players: list[Player]):
-        if self._game_state.can_trade():
-            pass
-        self.notify()
-
-
                 
 if __name__ == '__main__':
     game = Game()

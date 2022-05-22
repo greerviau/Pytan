@@ -63,9 +63,9 @@ class Port(object):
     def exchange(self) -> int:
         return self._exchange
 
-    def can_exchange(self, resource_cards: list[ResourceCards]) -> bool:
+    def can_exchange(self, resource_card: ResourceCards, count: int) -> bool:
         required_card = PORT_TO_RESOURCE[self._port_type] if self._port_type != PortTypes.ANY else resource_cards[0]
-        return len(resource_cards) >= self._exchange and resource_cards.count(required_card) == len(resource_cards)
+        return count >= self._exchange and resource_card == required_card
 
     def node_is_on_port(self, node_coord: int) -> bool:
         return node_coord == self._coord_1 or node_coord == self._coord_2
