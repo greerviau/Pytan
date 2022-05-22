@@ -11,6 +11,7 @@ python3 -m pip install -e ./Pytan
 ### Core Game
 ```python
 from pytan.core.game import Game
+from pytan.core.cards import ResourceCards as RC
 
 catan = Game()
 catan.start_game()
@@ -21,7 +22,7 @@ catan.pass_turn()
 catan.roll()
 ...
 catan.roll(7)
-catan.discard([('WHEAT',2), ('WOOD',1), ('ORE',3)])
+catan.discard([(RC.WHEAT,2), (RC.WOOD,1), (RC,ORE,3)])
 catan.move_robber(0x11)
 catan.steal(1) # player id
 ...
@@ -39,6 +40,7 @@ Or write custom gui elements
 import tkinter as tk
 from pytan.core.game import Game
 from pytan.ui.frames import BoardFrame, GameControlsFrame
+from pytan.ui.state import CatanUIState
 
 
 class CatanGUI(tk.Frame):
@@ -46,9 +48,10 @@ class CatanGUI(tk.Frame):
         super().__init__()
 
         game = Game()
+        ui_state = CatanUIState(game)
 
-        board_frame = BoardFrame(self, game)
-        controls_frame = GameControlsFrame(self, game)
+        board_frame = BoardFrame(self, game, ui_state)
+        controls_frame = GameControlsFrame(self, game, ui_state)
 
         board_frame.grid(row=0, column=0, sticky=tk.NSEW)
         controls_frame.grid(row=0, column=1, sticky=tk.NW)
