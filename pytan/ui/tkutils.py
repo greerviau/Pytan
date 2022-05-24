@@ -1,5 +1,11 @@
 import math
-import tkinter
+import tkinter as tk
+
+tk_status = {
+    True: tk.NORMAL,
+    False: tk.DISABLED,
+    None: tk.DISABLED
+}
 
 def try_parse_int(string: str) -> int:
     try:

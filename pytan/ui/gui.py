@@ -1,6 +1,7 @@
 import tkinter as tk
 from pytan.core.game import Game
-from pytan.ui.frames import BoardFrame, GameControlsFrame
+from pytan.ui.board import BoardFrame
+from pytan.ui.controls import GameControlsFrame
 from pytan.ui.state import CatanUIState
 
 
