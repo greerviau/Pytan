@@ -78,13 +78,22 @@ class CatanTile(object):
         return f'<Tile Type: {self._tile_type} - Coord: {hex(self._coord)} - Prob: {self._prob}>'
 
 class Board(hexmesh.HexMesh):
-    def __init__(self):
+    def __init__(self, seed=random.random()):
         super().__init__(n_layers = 2)
+        self.set_seed(seed)
+        random.seed(self._seed)
+        
+        self.setup_tiles()
+        self.setup_ports()
         self.reset()
         
     def reset(self):
-        self.setup_tiles()
-        self.setup_ports()
+        self.init_nodes()
+        self.init_edges()
+
+    def set_seed(self, seed: int):
+        self._seed = seed
+        random.seed(self._seed)
 
     def setup_tiles(self):
         self._robber = None

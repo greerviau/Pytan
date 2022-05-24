@@ -31,7 +31,7 @@ class CatanGameState(object):
         self._state = s
 
     def log(self, text: str, end='\n'):
-        self._game.log(text, end=end)
+        self._game.logger.log(text, end=end)
     
     def game_has_started(self) -> bool:
         return self._state != GameStates.UNDEFINED

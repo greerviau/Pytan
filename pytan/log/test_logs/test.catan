@@ -1,0 +1,11 @@
+set_seed=0.023803954382735415
+clear_players
+add_player=P1,0,red
+add_player=P2,1,blue
+add_player=P3,2,white
+add_player=P4,3,orange
+set_starting_player=3
+reset
+start_game
+build_settlement=0x67
+build_road=0x67
