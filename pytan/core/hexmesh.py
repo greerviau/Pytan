@@ -122,12 +122,16 @@ class HexMesh(object):
     def __init__(self, n_layers=0):
         #Init
         self._n_layers = n_layers
+        self._init_tiles()
+        self.init_nodes()
+        self.init_edges()
+    
+
+    def _init_tiles(self):
         self._tiles = {}
-        self._nodes = {}
-        self._edges = {}
 
         next_tile = 0x11
-        for n in range(n_layers, 0, -1):
+        for n in range(self._n_layers, 0, -1):
             self._tiles[next_tile] = None
             for d in TT_DIRS.values():
                 r = n
@@ -143,10 +147,16 @@ class HexMesh(object):
 
         self._n_tiles = len(self._tiles)
 
+    def init_nodes(self):
+        self._nodes = {}
         for tile in self._tiles:
             nodes = self.tile_neighboring_nodes(tile)
             for node in nodes:
                 self._nodes[node] = None
+
+    def init_edges(self):
+        self._edges = {}
+        for tile in self._tiles:
             edges = self.tile_neighboring_edges(tile)
             for edge in edges:
                 self._edges[edge] = None
