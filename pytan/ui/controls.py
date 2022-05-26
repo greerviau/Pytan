@@ -1,15 +1,52 @@
 import tkinter as tk
-import tkutils
-from tkutils import tk_status
+import pytan.ui.tkutils as tkutils
+from pytan.ui.tkutils import tk_status
 from pytan.core.game import Game
 from pytan.core.cards import ResourceCards, DevCards
 from pytan.core.state import GameStates
 from pytan.core.trading import PortTypes
 from pytan.ui.state import CatanUIState, UIStates
 
+class ReplayControl(tk.Frame):
+    def __init__(self, master: tk.Frame, replay):
+        tk.Frame.__init__(self, master)
+        self.master = master
+        self.replay = replay
+        self.replay.start()
+
+        self.playing = False
+        self.delay = 200
+
+        self.play_pause_button = tk.Button(self, command=self.on_play_pause, text='Play')
+        self.last_button = tk.Button(self, command=self.replay.step_backward, text='Last')
+        self.next_button = tk.Button(self, command=self.on_next, text='Next')
+        self.last_button.grid(row=0, column=0)
+        self.play_pause_button.grid(row=0, column=1)
+        self.next_button.grid(row=0, column=2)
+
+    def on_next(self):
+        if self.replay.has_next:
+            self.replay.step_forward()
+
+    def on_last(self):
+        if self.replay.has_last:
+            self.replay.step_backward()
+
+    def on_play_pause(self):
+        if self.playing:
+            self.playing = False
+            self.play_pause_button.configure(text='Play')
+            self.last_button.configure(state='normal')
+            self.next_button.configure(state='normal')
+        else:
+            self.playing = True
+            self.play_pause_button.configure(text='Pause')
+            self.last_button.configure(state='disabled')
+            self.next_button.configure(state='disabled')
+
 class GameControlsFrame(tk.Frame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__()
+        tk.Frame.__init__(self, master)
         self.master = master
         self.game = game
         self.game.add_observer(self)
@@ -17,12 +54,12 @@ class GameControlsFrame(tk.Frame):
 
         ui_state.set_state(UIStates.INGAME)
         
-        player_label_frame = PlayerLabelFrame(self, game, ui_state)
         dice_sides_frame = DiceSidesFrame(self, game, ui_state)
         action_frame = ActionFrame(self, game, ui_state)
         build_frame = BuildFrame(self, game, ui_state)
         dev_card_frame = DevCardFrame(self, game, ui_state)
         self.trade_button = tk.Button(self, command=self.on_trade, width=20, text='Trade')
+        self.save_button = tk.Button(self, command=self.game.logger.save_raw_log_file, width=20, text='Save Log')
 
         self.discard_frame = DiscardFrame(self, self.game, ui_state)
         self.steal_frame = StealFrame(self, self.game, ui_state)
@@ -30,12 +67,12 @@ class GameControlsFrame(tk.Frame):
         self.accept_trade_frame = AcceptTradeFrame(self, self.game, ui_state)
         self.confirm_trade_frame = ConfirmTradeFrame(self, self.game, ui_state)
 
-        player_label_frame.pack(pady=5, anchor='w')
-        dice_sides_frame.pack(pady=5)
-        action_frame.pack()
-        build_frame.pack()
-        dev_card_frame.pack()
-        self.trade_button.pack()
+        dice_sides_frame.pack()
+        action_frame.pack(pady=5)
+        build_frame.pack(pady=5)
+        dev_card_frame.pack(pady=5)
+        self.trade_button.pack(pady=5)
+        self.save_button.pack()
 
     def notify(self, observable):
         if self.game.state == GameStates.DISCARDING:
@@ -79,9 +116,27 @@ class GameControlsFrame(tk.Frame):
         self.discard_frame.pack_forget()
         self.set_states()
 
+class LogFrame(tk.Frame):
+    def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState, width=50, height=10):
+        tk.Frame.__init__(self, master)
+
+        self.master = master
+        self.game = game
+        self.game.add_observer(self)
+        self.ui_state = ui_state
+
+        self.text = tk.Text(self, width=width, height=height)
+        self.text.see(tk.END)
+        self.text.pack(expand=tk.YES, fill=tk.BOTH, anchor=tk.S)
+
+    def notify(self, observable):
+        self.text.delete(1.0, tk.END)
+        self.text.insert(tk.END, self.game.logger.log_dump())
+        self.text.see(tk.END)
+
 class PlayerLabelFrame(tk.Frame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__(master)
+        tk.Frame.__init__(self, master)
 
         self.master = master
         self.game = game
@@ -106,7 +161,9 @@ class PlayerLabelFrame(tk.Frame):
             else:
                 pl.config(fg='white')
             s += str(player)
-            s += f' - {player.victory_points}'
+            s += f' - VP: {player.victory_points}'
+            s += f' - K: {player.knights_played}'
+            s += f' - R: {player.longest_road_chain}'
             if player.victory_points != player.total_victory_points:
                 s += f'({player.total_victory_points})'
             s += ' | '
@@ -138,7 +195,7 @@ class PlayerLabelFrame(tk.Frame):
 
 class DiceSidesFrame(tk.Frame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__(master)
+        tk.Frame.__init__(self, master)
         
         self.master = master
         self.game = game
@@ -191,7 +248,7 @@ class DiceSidesFrame(tk.Frame):
 
 class ActionFrame(tk.Frame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__(master)
+        tk.Frame.__init__(self, master)
 
         self.master = master
         self.game = game
@@ -230,7 +287,7 @@ class ActionFrame(tk.Frame):
 
 class BuildFrame(tk.LabelFrame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__(master, text='Build')
+        tk.LabelFrame.__init__(self, master, text='Build')
 
         self.master = master
         self.game = game
@@ -277,7 +334,7 @@ class BuildFrame(tk.LabelFrame):
 
 class DevCardFrame(tk.Frame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__(master)
+        tk.Frame.__init__(self, master)
 
         self.master = master
         self.game = game
@@ -342,7 +399,7 @@ class DevCardFrame(tk.Frame):
 
 class MonopolyFrame(tk.LabelFrame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__(master, text='Monopoly')
+        tk.LabelFrame.__init__(self, master, text='Monopoly')
         self.master = master
         self.game = game
         self.ui_state = ui_state
@@ -370,47 +427,78 @@ class MonopolyFrame(tk.LabelFrame):
         self.confirm_button.grid(row=2, column=1)
 
     def on_wheat(self):
-        self._resource = ResourceCards.WHEAT
-        self.wood_bool.set(False)
-        self.sheep_bool.set(False)
-        self.brick_bool.set(False)
-        self.ore_bool.set(False)
+        status = 'normal'
+        if self.wheat_bool.get():
+            self._resource = ResourceCards.WHEAT
+            status = 'disabled'
+        else:
+            self._resource = None
+
+        self.wood_button.configure(state=status)
+        self.sheep_button.configure(state=status)
+        self.brick_button.configure(state=status)
+        self.ore_button.configure(state=status)
 
     def on_wood(self):
-        self._resource = ResourceCards.WOOD
-        self.wheat_bool.set(False)
-        self.sheep_bool.set(False)
-        self.brick_bool.set(False)
-        self.ore_bool.set(False)
+        status = 'normal'
+        if self.wood_bool.get():
+            self._resource = ResourceCards.WOOD
+            status = 'disabled'
+        else:
+            self._resource = None
+
+        self.wheat_button.configure(state=status)
+        self.sheep_button.configure(state=status)
+        self.brick_button.configure(state=status)
+        self.ore_button.configure(state=status)
 
     def on_sheep(self):
-        self._resource = ResourceCards.SHEEP
-        self.wheat_bool.set(False)
-        self.wood_bool.set(False)
-        self.brick_bool.set(False)
-        self.ore_bool.set(False)
+        status = 'normal'
+        if self.sheep_bool.get():
+            self._resource = ResourceCards.SHEEP
+            status = 'disabled'
+        else:
+            self._resource = None
+
+        self.wheat_button.configure(state=status)
+        self.wood_button.configure(state=status)
+        self.brick_button.configure(state=status)
+        self.ore_button.configure(state=status)
 
     def on_brick(self):
-        self._resource = ResourceCards.BRICK
-        self.wheat_bool.set(False)
-        self.wood_bool.set(False)
-        self.sheep_bool.set(False)
-        self.ore_bool.set(False)
+        status = 'normal'
+        if self.brick_bool.get():
+            self._resource = ResourceCards.BRICK
+            status = 'disabled'
+        else:
+            self._resource = None
+
+        self.wheat_button.configure(state=status)
+        self.wood_button.configure(state=status)
+        self.sheep_button.configure(state=status)
+        self.ore_button.configure(state=status)
 
     def on_ore(self):
-        self._resource = ResourceCards.ORE
-        self.wheat_bool.set(False)
-        self.wood_bool.set(False)
-        self.sheep_bool.set(False)
-        self.brick_bool.set(False)
+        status = 'normal'
+        if self.ore_bool.get():
+            self._resource = ResourceCards.ORE
+            status = 'disabled'
+        else:
+            self._resource = None
+
+        self.wheat_button.configure(state=status)
+        self.wood_button.configure(state=status)
+        self.sheep_button.configure(state=status)
+        self.brick_button.configure(state=status)
 
     def on_confirm(self):
-        self.master.clear_monopoly()
-        self.game.play_monopoly(self._resource)
+        if self._resource:
+            self.master.clear_monopoly()
+            self.game.play_monopoly(self._resource)
 
 class YearPlentyFrame(tk.LabelFrame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__(master, text='Year Plenty')
+        tk.LabelFrame.__init__(self, master, text='Year Plenty')
         self.master = master
         self.game = game
         self.ui_state = ui_state
@@ -428,6 +516,7 @@ class YearPlentyFrame(tk.LabelFrame):
         self.choice_1_ore_bool = tk.BooleanVar()
 
         self.choice_1_label = tk.Label(self, text='Card 1')
+        self.choice_1_label.pack(pady=5)
         self.choice_1_wheat_button = tk.Checkbutton(self.choice_frame, variable=self.choice_1_wheat_bool, command=lambda:self.on_wheat(1), text='Wheat')
         self.choice_1_wood_button = tk.Checkbutton(self.choice_frame, variable=self.choice_1_wood_bool, command=lambda:self.on_wood(1), text='Wood')
         self.choice_1_sheep_button = tk.Checkbutton(self.choice_frame, variable=self.choice_1_sheep_bool, command=lambda:self.on_sheep(1), text='Sheep')
@@ -447,20 +536,21 @@ class YearPlentyFrame(tk.LabelFrame):
         self.choice_2_ore_bool = tk.BooleanVar()
 
         self.choice_2_label = tk.Label(self, text='Card 2')
+        self.choice_2_label.pack(pady=5)
         self.choice_2_wheat_button = tk.Checkbutton(self.choice_frame, variable=self.choice_2_wheat_bool, command=lambda:self.on_wheat(2), text='Wheat')
         self.choice_2_wood_button = tk.Checkbutton(self.choice_frame, variable=self.choice_2_wood_bool, command=lambda:self.on_wood(2), text='Wood')
         self.choice_2_sheep_button = tk.Checkbutton(self.choice_frame, variable=self.choice_2_sheep_bool, command=lambda:self.on_sheep(2), text='Sheep')
         self.choice_2_brick_button = tk.Checkbutton(self.choice_frame, variable=self.choice_2_brick_bool, command=lambda:self.on_brick(2), text='Brick')
         self.choice_2_ore_button = tk.Checkbutton(self.choice_frame, variable=self.choice_2_ore_bool, command=lambda:self.on_ore(2), text='Ore')
         
-        self.choice_2_wheat_button.grid(row=0, column=0)
-        self.choice_2_wood_button.grid(row=0, column=2)
-        self.choice_2_sheep_button.grid(row=0, column=2)
-        self.choice_2_brick_button.grid(row=0, column=3)
-        self.choice_2_ore_button.grid(row=0, column=4)
+        self.choice_2_wheat_button.grid(row=1, column=0)
+        self.choice_2_wood_button.grid(row=1, column=2)
+        self.choice_2_sheep_button.grid(row=1, column=2)
+        self.choice_2_brick_button.grid(row=1, column=3)
+        self.choice_2_ore_button.grid(row=1, column=4)
         
         self.confirm_button = tk.Button(self, command=self.on_confirm, text='Confirm')
-        self.confirm_button.pack()
+        self.confirm_button.pack(pady=5)
 
     def set_states(self):
         if self._resource_1:
@@ -475,11 +565,11 @@ class YearPlentyFrame(tk.LabelFrame):
             if ResourceCards.ORE != self._resource_1:
                 self.ore_button.configure(state='disabled')
         else:
-            self.choice_1_wood_button.configure(state='enabled')
-            self.choice_1_wheat_button.configure(state='enabled')
-            self.choice_1_sheep_button.configure(state='enabled')
-            self.choice_1_brick_button.configure(state='enabled')
-            self.choice_1_ore_button.configure(state='enabled')
+            self.choice_1_wood_button.configure(state='normal')
+            self.choice_1_wheat_button.configure(state='normal')
+            self.choice_1_sheep_button.configure(state='normal')
+            self.choice_1_brick_button.configure(state='normal')
+            self.choice_1_ore_button.configure(state='normal')
 
         if self._resource_2:
             if ResourceCards.WHEAT != self._resource_2:
@@ -493,11 +583,11 @@ class YearPlentyFrame(tk.LabelFrame):
             if ResourceCards.ORE != self._resource_2:
                 self.ore_button.configure(state='disabled')
         else:
-            self.choice_2_wood_button.configure(state='enabled')
-            self.choice_2_wheat_button.configure(state='enabled')
-            self.choice_2_sheep_button.configure(state='enabled')
-            self.choice_2_brick_button.configure(state='enabled')
-            self.choice_2_ore_button.configure(state='enabled')
+            self.choice_2_wood_button.configure(state='normal')
+            self.choice_2_wheat_button.configure(state='normal')
+            self.choice_2_sheep_button.configure(state='normal')
+            self.choice_2_brick_button.configure(state='normal')
+            self.choice_2_ore_button.configure(state='normal')
     
     def on_wheat(self, card_n: int):
         if card_n == 1 and self.choice_1_wheat_bool.get():
@@ -561,7 +651,7 @@ class YearPlentyFrame(tk.LabelFrame):
 
 class DiscardFrame(tk.LabelFrame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__(master, text=f'Discard {game.current_player.n_resource_cards//2} cards')
+        tk.LabelFrame.__init__(self, master, text=f'Discard {game.current_player.n_resource_cards//2} cards')
         self.master = master
         self.game = game
         self.ui_state = ui_state
@@ -628,7 +718,7 @@ class DiscardFrame(tk.LabelFrame):
 
 class StealFrame(tk.LabelFrame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__(master, text='Pick a player to steal from')
+        tk.LabelFrame.__init__(self, master, text='Pick a player to steal from')
         self.master = master
         self.game = game
         self.ui_state = ui_state
@@ -643,7 +733,7 @@ class StealFrame(tk.LabelFrame):
 
 class TradingFrame(tk.LabelFrame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__(master, text='Offer Trade')
+        tk.LabelFrame.__init__(self, master, text='Offer Trade')
         self.master = master
         self.game = game
         self.ui_state = ui_state
@@ -835,7 +925,7 @@ class TradingFrame(tk.LabelFrame):
 
 class AcceptTradeFrame(tk.LabelFrame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__(master, text='Accept or Decline Trade')
+        tk.LabelFrame.__init__(self, master, text='Accept or Decline Trade')
         self.master = master
         self.game = game
         self.ui_state = ui_state
@@ -855,7 +945,7 @@ class AcceptTradeFrame(tk.LabelFrame):
     
 class ConfirmTradeFrame(tk.LabelFrame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__(master, text='Choose player to trade with')
+        tk.LabelFrame.__init__(self, master, text='Choose player to trade with')
         self.master = master
         self.game = game
         self.ui_state = ui_state

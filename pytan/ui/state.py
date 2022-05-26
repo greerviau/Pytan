@@ -80,16 +80,16 @@ class CatanUIState(object):
         return self._state == UIStates.INGAME and self.game.state.can_buy_dev_card()
 
     def can_play_knight(self) -> bool:
-        return self.game.state.can_play_knight()
+        return self._state == UIStates.INGAME and self.game.state.can_play_knight()
     
     def can_play_monopoly(self) -> bool:
-        return self.game.state.can_play_monopoly()
+        return self._state == UIStates.INGAME and self.game.state.can_play_monopoly()
     
     def can_play_road_builder(self) -> bool:
-        return self.game.state.can_play_road_builder()
+        return self._state == UIStates.INGAME and self.game.state.can_play_road_builder()
     
     def can_play_year_plenty(self) -> bool:
-        return self.game.state.can_play_year_plenty()
+        return self._state == UIStates.INGAME and self.game.state.can_play_year_plenty()
     
     def can_trade(self) -> bool:
         return self._state == UIStates.INGAME and self.game.state.can_trade()

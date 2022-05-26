@@ -1,6 +1,6 @@
 import tkinter as tk
-import tkutils
-from tkutils import tk_status
+import pytan.ui.tkutils as tkutils
+from pytan.ui.tkutils import tk_status
 import math
 import functools
 from pytan.core import hexmesh
@@ -10,16 +10,15 @@ from pytan.core.piece import Piece, PieceTypes
 from pytan.ui.state import CatanUIState, UIStates
 
 class BoardFrame(tk.Frame):
-    def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
-        super().__init__()
+    def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState, interact=True):
+        tk.Frame.__init__(self, master)
         self.master = master
         self.game = game
         self.game.add_observer(self)
 
         self.ui_state = ui_state
 
-        self._board = game.board
-
+        self._interact = interact
         
         self._board_canvas = tk.Canvas(self, height=600, width=600, bg='#24AAFA')
         self._board_canvas.pack(expand=tk.YES, fill=tk.BOTH)
@@ -27,24 +26,25 @@ class BoardFrame(tk.Frame):
         self._center_to_edge = math.cos(math.radians(30)) * self._tile_radius
 
     def piece_click(self, piece_type, event):
-        tags = self._board_canvas.gettags(event.widget.find_closest(event.x, event.y))
-        # avoid processing tile clicks
-        tag = None
-        for t in tags:
-            if 'tile' not in t:
-                tag = t
-                break
-        if tag is not None:
-            self.ui_state.set_state(UIStates.INGAME)
-            if piece_type == PieceTypes.ROAD:
-                self.game.build_road(self._coord_from_road_tag(tag))
-            elif piece_type == PieceTypes.SETTLEMENT:
-                self.game.build_settlement(self._coord_from_settlement_tag(tag))
-            elif piece_type == PieceTypes.CITY:
-                self.game.build_city(self._coord_from_city_tag(tag))
-            elif piece_type == PieceTypes.ROBBER:
-                self.game.move_robber(self._coord_from_robber_tag(tag))
-            self.redraw()
+        if self._interact:
+            tags = self._board_canvas.gettags(event.widget.find_closest(event.x, event.y))
+            # avoid processing tile clicks
+            tag = None
+            for t in tags:
+                if 'tile' not in t:
+                    tag = t
+                    break
+            if tag is not None:
+                self.ui_state.set_state(UIStates.INGAME)
+                if piece_type == PieceTypes.ROAD:
+                    self.game.build_road(self._coord_from_road_tag(tag))
+                elif piece_type == PieceTypes.SETTLEMENT:
+                    self.game.build_settlement(self._coord_from_settlement_tag(tag))
+                elif piece_type == PieceTypes.CITY:
+                    self.game.build_city(self._coord_from_city_tag(tag))
+                elif piece_type == PieceTypes.ROBBER:
+                    self.game.move_robber(self._coord_from_robber_tag(tag))
+                self.redraw()
 
     def notify(self, observable):
         self.redraw()
@@ -58,18 +58,19 @@ class BoardFrame(tk.Frame):
             self._draw_ports(board, terrain_centers)    
         
         self._draw_pieces(board, terrain_centers)
-        if self.ui_state.is_building_road():
-            self._draw_piece_shadows(PieceTypes.ROAD, board, terrain_centers)
-        if self.ui_state.is_building_settlement():
-            self._draw_piece_shadows(PieceTypes.SETTLEMENT, board, terrain_centers)
-        if self.ui_state.is_building_city():
-            self._draw_piece_shadows(PieceTypes.CITY, board, terrain_centers)
-        if self.ui_state.is_moving_robber():
-            self._draw_piece_shadows(PieceTypes.ROBBER, board, terrain_centers) 
+        if self._interact:
+            if self.ui_state.is_building_road():
+                self._draw_piece_shadows(PieceTypes.ROAD, board, terrain_centers)
+            if self.ui_state.is_building_settlement():
+                self._draw_piece_shadows(PieceTypes.SETTLEMENT, board, terrain_centers)
+            if self.ui_state.is_building_city():
+                self._draw_piece_shadows(PieceTypes.CITY, board, terrain_centers)
+            if self.ui_state.is_moving_robber():
+                self._draw_piece_shadows(PieceTypes.ROBBER, board, terrain_centers) 
 
     def redraw(self):
         self._board_canvas.delete(tk.ALL)
-        self.draw(self._board)
+        self.draw(self.game.board)
 
     def _draw_terrain(self, board):
         centers = {}
@@ -178,7 +179,7 @@ class BoardFrame(tk.Frame):
             for node in nodes:
                 self._draw_piece(node, piece, terrain_centers, ghost=True)
         elif piece_type == PieceTypes.ROBBER:
-            tiles = self._board.legal_robber_placements()
+            tiles = self.game.board.legal_robber_placements()
             for coord in tiles:
                 self._draw_piece(coord, piece, terrain_centers, ghost=True)
 
@@ -291,16 +292,16 @@ class BoardFrame(tk.Frame):
         self._board_canvas.create_oval(x-radius, y-radius, x+radius, y+radius, **opts)
 
     def _get_pieces(self, board):
-        roads = self._board.roads.values()
-        settlements = self._board.settlements.values()
-        cities = self._board.cities.values()
-        robber = self._board.robber
+        roads = self.game.board.roads.values()
+        settlements = self.game.board.settlements.values()
+        cities = self.game.board.cities.values()
+        robber = self.game.board.robber
         return roads, settlements, cities, robber
 
     def _get_piece_center(self, piece_coord, piece, terrain_centers):
         if piece.piece_type == PieceTypes.ROAD:
             # these pieces are on edges
-            tile_coord = self._board.nearest_tile_to_edge(piece_coord)
+            tile_coord = self.game.board.nearest_tile_to_edge(piece_coord)
             direction = hexmesh.tile_to_edge_direction(tile_coord, piece_coord)
             terrain_x, terrain_y = terrain_centers[tile_coord]
             angle = 60*self._edge_angle_order.index(direction)
@@ -309,7 +310,7 @@ class BoardFrame(tk.Frame):
             return terrain_x + dx, terrain_y + dy, angle + 90
         elif piece.piece_type in [PieceTypes.SETTLEMENT, PieceTypes.CITY]:
             # these pieces are on nodes
-            tile_coord = self._board.nearest_tile_to_node(piece_coord)
+            tile_coord = self.game.board.nearest_tile_to_node(piece_coord)
             direction = hexmesh.tile_to_node_direction(tile_coord, piece_coord)
             terrain_x, terrain_y = terrain_centers[tile_coord]
             angle = 30 + 60*self._node_angle_order.index(direction)
