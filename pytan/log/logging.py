@@ -16,7 +16,7 @@ LOG_CODES = {
     'build_road': '{}={}',
     'build_settlement': '{}={}',
     'build_city': '{}={}',
-    'buy_dev_card': '{}',
+    'buy_dev_card': '{}={}',
     'move_robber': '{}={}',
     'steal': '{}={}',
     'discard': '{}={}',
@@ -31,7 +31,7 @@ LOG_CODES = {
 }
 
 class Logger(object):
-    def __init__(self, log_path='./game_logs/', console_log=True, raw_log=True):
+    def __init__(self, log_path='./game_logs/', console_log=False, raw_log=True):
         self.console_log = console_log
         self.raw_log = raw_log
 
@@ -58,8 +58,9 @@ class Logger(object):
             str_params = []
             for param in params:
                 if type(param) == list:
-                    s = ''
+                    l = []
                     for p in param:
+                        s = ''
                         if type(p) == tuple:
                             for e in p:
                                 if type(e) == ResourceCards:
@@ -70,14 +71,14 @@ class Logger(object):
                                     s += ':'
                         elif type(p) == int:
                             s += str(p)
-                        if p != param[-1]:
-                            s += '-'
-                    str_params.append(s)
+                        l.append(s)
+                    l_s = '-'.join(l)
+                    str_params.append(f'[{l_s}]')
                 elif type(param) == Player:
                     str_params.append(param.name)
                     str_params.append(param.identifier)
                     str_params.append(param.color)
-                elif type(param) == ResourceCards:
+                elif type(param) in [ResourceCards, DevCards]:
                     str_params.append(param.value)
                 elif type(param) in [int, float, bool, str]:
                     str_params.append(str(param))

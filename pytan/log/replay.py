@@ -1,29 +1,33 @@
 from pytan.log.logging import Logger, LOG_CODES
 from pytan.core.game import Game
-from pytan.core.cards import ResourceCards
+from pytan.core.cards import ResourceCards, DevCards
 from pytan.core.player import Player
 import os
-import copy
 
 class Replay(object):
-    def __init__(self, log_file: str):
+    def __init__(self, log_file: str, console_log = False):
         assert os.path.exists(log_file)
         assert log_file.split('.')[-1] == 'catan'
 
         file = open(log_file, 'r')
         self._log_list = file.readlines()
         self._log_idx = -1
-        
-        self._game = Game(logger=Logger(raw_log=False))
 
-        self._game_states = []
+        self.replay_started = False
+        
+        self._game = Game(logger=Logger(raw_log=False, console_log=console_log))
 
     @property
     def game(self):
         return self._game
+    
+    @property
+    def has_next(self):
+        return self._log_idx < len(self._log_list) - 1
 
-    def _store_state(self):
-        self._game_states.append(copy.deepcopy(self._game))
+    @property
+    def has_last(self):
+        return self._log_idx > 0 and self._game.can_undo
 
     def _parse_params(self, params_str):
         params_str_list = params_str.split(',')
@@ -44,19 +48,22 @@ class Replay(object):
                 continue
             except ValueError:
                 pass
-            try:
-                params.append(p_s)
+            if p_s in [i.value for i in ResourceCards]:
+                params.append(ResourceCards(p_s))
                 continue
-            except ValueError:
-                pass
-            if p_s.find('-') > 0:
-                p_s_list = p_s.split('-')
+            elif p_s in [i.value for i in DevCards]:
+                params.append(DevCards(p_s))
+                continue
+            elif p_s.find('[') > -1:
+                param = []
+
+                p_s_list = p_s.strip().strip('][').split('-')
+                
                 if p_s_list[0].isnumeric():
-                    params.append([int(e) for e in p_s_list])
-                else:
-                    p_list = []
+                    param = [int(e) for e in p_s_list]
+                elif p_s_list[0]:
                     for e in p_s_list:
-                        if e.find(':') > 0:
+                        if e.find(':') > -1:
                             t = []
                             comps = e.split(':')
                             for c in comps:
@@ -64,8 +71,10 @@ class Replay(object):
                                     t.append(int(c))
                                 elif c in [i.value for i in ResourceCards]:
                                     t.append(ResourceCards(c))
-                            p_list.append(tuple(t))
-                    params.append(p_list)
+                            param.append(tuple(t))
+                params.append(param)
+            else:
+                params.append(p_s)
         return params
 
     def get_log(self, idx):
@@ -83,41 +92,47 @@ class Replay(object):
         return function, params
 
     def start(self):
-        if len(self._game_states) == 0:
+        if not self.replay_started:
             while 1:
                 function, params = self.get_log(0)
                 self._log_list.pop(0)
                 getattr(self._game, function)(*params)
                 if function == 'start_game':
                     break
-            self._store_state()
+            self.replay_started = True
         else:
             print('The replay already started')
 
     def step_forward(self):
-        if len(self._game_states) > 0:
-            self._log_idx += 1
-            if len(self._game_states) - 1 <= self._log_idx:
-                function, params = self.get_log(self._log_idx)
-                getattr(self._game, function)(*params)
-                self._store_state()
+        if self.replay_started:
+            if self.has_next:
+                if not self._game.can_redo:
+                    self._log_idx += 1
+                    function, params = self.get_log(self._log_idx)
+                    getattr(self._game, function)(*params)
+                else:
+                    self._game.redo()
             else:
-                self._game = self._game_states[self._log_idx+1]
+                print('Reached the end')
         else:
             print('Start the replay first')
 
     def step_backward(self):
-        if len(self._game_states) > 0:
-            if self._log_idx > 0:
-                self._game = self._game_states[self._log_idx]
-                self._log_idx -= 1
+        if self.replay_started:
+            if self.has_last:
+                self._game.undo()
+            else:
+                print('At the begining')
         else:
             print('Start the replay first')
 
 if __name__ == '__main__':
-    replay = Replay('./test_logs/test.catan')
+    replay = Replay('./test_logs/test_1.catan', console_log=True)
     replay.start()
     replay.step_forward()
     replay.step_forward()
     replay.step_backward()
+    replay.step_forward()
+    replay.step_forward()
+    replay.step_forward()
     replay.step_forward()

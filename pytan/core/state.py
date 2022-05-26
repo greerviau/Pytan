@@ -14,6 +14,7 @@ class GameStates(Enum):
     MOVING_ROBBER = 'MOVING_ROBBER'
     STEALING = 'STEALING'
     ROADBUILDER = 'ROADBUILDER'
+    GAME_OVER = 'GAME_OVER'
 
 class CatanGameState(object):
     def __init__(self, game: 'Game'):
@@ -226,10 +227,13 @@ class CatanGameState(object):
         if self.game_has_started():
             if self._state == GameStates.INGAME:
                 if not self.can_roll():
-                    if self._game.current_player.can_play_knight(self._game.turn):
-                        return True
+                    if not self._game.knight_played_this_turn:
+                        if self._game.current_player.can_play_knight(self._game.turn):
+                            return True
+                        elif log:
+                            self.log(f'{self._game.current_player} has no valid knight card')
                     elif log:
-                        self.log(f'{self._game.current_player} has no valid knight card')
+                        self.log(f'Knight was already played this turn')
                 elif log:
                     self.log(f'Cant play knight, current state {self._state}')
             elif log:

@@ -299,30 +299,52 @@ class Board(hexmesh.HexMesh):
                 legal_city_placements.append(coord)
         return legal_city_placements
 
-    def build_road(self, edge_coord: int, player: Player) -> Piece:
+    def build_road(self, edge_coord: int, player: Player) -> bool:
         edge = self._edges[edge_coord]
         if edge == None:
-            road = Piece(edge_coord, player, PieceTypes.ROAD)
-            self._edges[edge_coord] = road
-            return road
-        return None
+            self._edges[edge_coord] = Piece(edge_coord, player, PieceTypes.ROAD)
+            return True
+        return False
         
-    def build_settlement(self, node_coord: int, player: Player) -> Piece:
+    def build_settlement(self, node_coord: int, player: Player) -> bool:
         node = self._nodes[node_coord]
         if node == None:
-            settlement = Piece(node_coord, player, PieceTypes.SETTLEMENT)
-            self._nodes[node_coord] = settlement
-            return settlement
-        return None
+            self._nodes[node_coord] = Piece(node_coord, player, PieceTypes.SETTLEMENT)
+            return True
+        return False
     
-    def build_city(self, node_coord: int, player: Player) -> Piece:
+    def build_city(self, node_coord: int, player: Player) -> bool:
         node = self._nodes[node_coord]
         if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT:
             if node.owner_id == player.identifier:
-                city = Piece(node_coord, player, PieceTypes.CITY)
-                self._nodes[node_coord] = city
-                return city
-        return None
+                self._nodes[node_coord] = Piece(node_coord, player, PieceTypes.CITY)
+                return True
+        return False
+
+    def _neighboring_friendly_roads(self, road_coord: int, player_id: int) -> list[int]:
+        return [coord for coord, road in self.edge_neighboring_edges(road_coord).items() if type(road) == Piece and road.owner_id == player_id]
+
+    def find_longest_road_chain(self, player_id: int) -> int:
+        roads = list(self.friendly_roads(player_id).keys())
+        longest_chain = 0
+        while any(roads):
+            explored = set()
+            chain_length = [1]
+            self._explore_road(roads[0], player_id, explored, chain_length)
+            if chain_length[0] > longest_chain:
+                longest_chain = chain_length[0]
+            roads = [r for r in roads if r not in explored]
+        return longest_chain
+
+    def _explore_road(self, road_coord: int, player_id: int, explored: set, chain_length: list[int]) -> int:
+        explored.add(road_coord)
+        neighbors = self._neighboring_friendly_roads(road_coord, player_id)
+        neighbors = [n for n in neighbors if n not in explored]
+        explored.update(neighbors)
+        if any(neighbors):
+            chain_length[0] += 1
+            for neighbor in neighbors:
+                self._explore_road(neighbor, player_id, explored, chain_length)    
 
     def __repr__(self):
         s = 'Board\n\n'

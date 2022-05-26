@@ -15,6 +15,7 @@ class Player(object):
         self._vps = 0
 
         self._knights_played = 0
+        self._longest_road_chain = 0
 
         self._largest_army = False
         self._longest_road = False
@@ -88,6 +89,10 @@ class Player(object):
         return self._knights_played
 
     @property
+    def longest_road_chain(self) -> int:
+        return self._longest_road_chain
+
+    @property
     def largest_army(self) -> bool:
         return self._largest_army
 
@@ -108,11 +113,15 @@ class Player(object):
         return self._last_city_built
 
     @largest_army.setter
-    def largest_army(self, b):
+    def largest_army(self, b: bool):
         self._largest_army = b
 
+    @longest_road_chain.setter
+    def longest_road_chain(self, c: int):
+        self._longest_road_chain = c
+
     @longest_road.setter
-    def longest_road(self, b):
+    def longest_road(self, b: bool):
         self._longest_road = b
 
     def count_resource_cards(self, card: ResourceCards) -> int:
@@ -215,7 +224,7 @@ class Player(object):
 
     def can_play_road_builder(self, turn: int) -> bool:
         for card, t in self._dev_cards:
-            if card == DevCards.ROADBUILD and t < turn:
+            if card == DevCards.ROADBUILDER and t < turn:
                 return True
         return False
 
