@@ -327,8 +327,8 @@ class Board(hexmesh.HexMesh):
     def find_longest_road_chain(self, player_id: int) -> int:
         roads = list(self.friendly_roads(player_id).keys())
         longest_chain = 0
+        explored = set()
         while any(roads):
-            explored = set()
             chain_length = [1]
             self._explore_road(roads[0], player_id, explored, chain_length)
             if chain_length[0] > longest_chain:
@@ -336,15 +336,21 @@ class Board(hexmesh.HexMesh):
             roads = [r for r in roads if r not in explored]
         return longest_chain
 
-    def _explore_road(self, road_coord: int, player_id: int, explored: set, chain_length: list[int]) -> int:
+    def _explore_road(self, road_coord: int, player_id: int, explored: set, chain_length: list[int], parent_neighbors=[]) -> int:
         explored.add(road_coord)
         neighbors = self._neighboring_friendly_roads(road_coord, player_id)
+        if chain_length[0] == 1:
+            parent_neighbors = neighbors.copy()
+        elif chain_length[0] == 2 and any([n for n in parent_neighbors if n not in neighbors and road_coord != n]):
+            chain_length[0] += 1
+        else:
+            parent_neighbors = []
         neighbors = [n for n in neighbors if n not in explored]
         explored.update(neighbors)
         if any(neighbors):
             chain_length[0] += 1
             for neighbor in neighbors:
-                self._explore_road(neighbor, player_id, explored, chain_length)    
+                self._explore_road(neighbor, player_id, explored, chain_length, parent_neighbors=parent_neighbors)    
 
     def __repr__(self):
         s = 'Board\n\n'

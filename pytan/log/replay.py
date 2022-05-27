@@ -23,7 +23,7 @@ class Replay(object):
     
     @property
     def has_next(self):
-        return self._log_idx < len(self._log_list) - 1
+        return self._log_idx < len(self._log_list) - 1 or self._game.can_redo
 
     @property
     def has_last(self):
@@ -106,12 +106,12 @@ class Replay(object):
     def step_forward(self):
         if self.replay_started:
             if self.has_next:
-                if not self._game.can_redo:
+                if self._game.can_redo:
+                    self._game.redo()
+                else:
                     self._log_idx += 1
                     function, params = self.get_log(self._log_idx)
                     getattr(self._game, function)(*params)
-                else:
-                    self._game.redo()
             else:
                 print('Reached the end')
         else:
@@ -129,10 +129,5 @@ class Replay(object):
 if __name__ == '__main__':
     replay = Replay('./test_logs/test_1.catan', console_log=True)
     replay.start()
-    replay.step_forward()
-    replay.step_forward()
-    replay.step_backward()
-    replay.step_forward()
-    replay.step_forward()
-    replay.step_forward()
-    replay.step_forward()
+    while replay.has_next:
+        replay.step_forward()

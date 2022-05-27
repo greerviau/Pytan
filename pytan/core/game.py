@@ -125,7 +125,6 @@ class Game(object):
             if player.total_victory_points >= 10:
                 self._logger.log(f'GAME OVER {self.current_turn_player} wins!')
                 self._game_state.set_state(GameStates.GAME_OVER)
-                self._winner = self._players[self._current_player_idx]
         for obs in self._observers:
             try:
                 obs.notify(self)
@@ -232,11 +231,11 @@ class Game(object):
 
     @property
     def longest_road(self) -> Player:
-        return self._players[self._longest_road] if self._longest_road > -1 else None
+        return self.get_player_by_id(self._longest_road) if self._longest_road > -1 else None
 
     @property
     def largest_army(self) -> Player:
-        return self._players[self._largest_army] if self._largest_army > -1 else None
+        return self.get_player_by_id(self._largest_army) if self._largest_army > -1 else None
 
     @property
     def moves_made(self) -> int:
@@ -341,9 +340,12 @@ class Game(object):
         for p_id, cards in pickups.items():
             pickup_list = []
             player = self.get_player_by_id(p_id)
+            p_l = []
             for card, count in cards.items():
-                self._logger.log(f'{player} picked up {count} {card.value}')
+                p_l.append(f'{count} {card.value}')
                 pickup_list.append((card,count))
+            s = ', '.join(p_l)
+            self._logger.log(f'{player} picked up {s}')
             player.add_resource_cards(pickup_list)
             self._remove_resources(pickup_list)
 
@@ -358,10 +360,11 @@ class Game(object):
                 self._discarding_players.pop(0)
                 player.remove_resource_cards(resource_list)
                 self._add_resources(resource_list)
-                s = f'{player} discarded '
+                d_l = []
                 for card, n in resource_list:
-                    s += f'{n} {card.value} '
-                self._logger.log(s)
+                    d_l.append(f'{n} {card.value}')
+                s = ', '.join(d_l)
+                self._logger.log(f'{player} discarded {s}')
                 self._logger.log_action('discard', resource_list)
                 if len(self._discarding_players) == 0:
                     self._game_state.set_state(GameStates.MOVING_ROBBER)
@@ -445,7 +448,9 @@ class Game(object):
                 chain = self._board.find_longest_road_chain(self.current_turn_player.identifier)
                 self.current_turn_player.longest_road_chain = chain
                 if chain >= 5:
-                    if not self.longest_road or (self.longest_chain and chain > self.longest_road.longest_road_chain):
+                    if not self.longest_road or (self.longest_road and chain > self.longest_road.longest_road_chain):
+                        if self.longest_road:
+                            self.longest_road.longest_road = False
                         self._longest_road = self.current_turn_player.identifier
                         self.current_turn_player.longest_road = True
                 return True
@@ -683,7 +688,7 @@ class Game(object):
     def confirm_trade(self, player_id: int):
         if self._game_state.can_confirm_trade(log=True):
             player = self.get_player_by_id(player_id)
-            if player_id in [p.identifier for p in self._players_accepted_trade]:
+            if player_id in self._players_accepted_trade:
                 self.current_turn_player.remove_resource_cards(self._give_trade)
                 self.current_turn_player.add_resource_cards(self._want_trade)
                 player.remove_resource_cards(self._want_trade)
@@ -817,8 +822,6 @@ class Game(object):
         self._turn = state['turn']
     
     def undo(self):
-        print('undo')
-        print(self._state_idx, len(self._stored_states))
         if len(self._stored_states) > 0 and self._state_idx > 0:
             self._state_idx -= 1
             self._restore_state(self._stored_states[self._state_idx])
@@ -827,8 +830,6 @@ class Game(object):
             print('Cant undo')
     
     def redo(self):
-        print('redo')
-        print(self._state_idx, len(self._stored_states))
         if self._state_idx < len(self._stored_states)-1:
             self._state_idx += 1
             self._restore_state(self._stored_states[self._state_idx])
