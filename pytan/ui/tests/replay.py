@@ -28,13 +28,6 @@ class ReplayGUI(tk.Frame):
 
         board_frame.redraw()
 
-        self.step()
-    
-    def step(self):
-        if self.replay_frame.playing and self.replay.has_next:
-            self.replay.step_forward()
-        self.after(self.replay_frame.delay, self.step)
-
 if __name__ == '__main__':
         
     app = tk.Tk()

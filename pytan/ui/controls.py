@@ -15,7 +15,7 @@ class ReplayControl(tk.Frame):
         self.replay.start()
 
         self.playing = False
-        self.delay = 200
+        self.delay = 1
 
         self.play_pause_button = tk.Button(self, command=self.on_play_pause, text='Play')
         self.last_button = tk.Button(self, command=self.replay.step_backward, text='Last')
@@ -23,6 +23,15 @@ class ReplayControl(tk.Frame):
         self.last_button.grid(row=0, column=0)
         self.play_pause_button.grid(row=0, column=1)
         self.next_button.grid(row=0, column=2)
+
+        self.step()
+
+    def step(self):
+        if self.playing and self.replay.has_next:
+            self.replay.step_forward()
+        else:
+            self.pause()
+        self.after(self.delay, self.step)
 
     def on_next(self):
         if self.replay.has_next:
@@ -32,17 +41,23 @@ class ReplayControl(tk.Frame):
         if self.replay.has_last:
             self.replay.step_backward()
 
+    def play(self):
+        self.playing = True
+        self.play_pause_button.configure(text='Pause')
+        self.last_button.configure(state='disabled')
+        self.next_button.configure(state='disabled')
+
+    def pause(self):
+        self.playing = False
+        self.play_pause_button.configure(text='Play')
+        self.last_button.configure(state='normal')
+        self.next_button.configure(state='normal')
+
     def on_play_pause(self):
         if self.playing:
-            self.playing = False
-            self.play_pause_button.configure(text='Play')
-            self.last_button.configure(state='normal')
-            self.next_button.configure(state='normal')
+            self.pause()
         else:
-            self.playing = True
-            self.play_pause_button.configure(text='Pause')
-            self.last_button.configure(state='disabled')
-            self.next_button.configure(state='disabled')
+            self.play()
 
 class GameControlsFrame(tk.Frame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
@@ -71,7 +86,7 @@ class GameControlsFrame(tk.Frame):
         action_frame.pack(pady=5)
         build_frame.pack(pady=5)
         dev_card_frame.pack(pady=5)
-        self.trade_button.pack(pady=5)
+        self.trade_button.pack()
         self.save_button.pack()
 
     def notify(self, observable):
@@ -162,10 +177,10 @@ class PlayerLabelFrame(tk.Frame):
                 pl.config(fg='white')
             s += str(player)
             s += f' - VP: {player.victory_points}'
-            s += f' - K: {player.knights_played}'
-            s += f' - R: {player.longest_road_chain}'
             if player.victory_points != player.total_victory_points:
                 s += f'({player.total_victory_points})'
+            s += f' - K: {player.knights_played}'
+            s += f' - R: {player.longest_road_chain}'
             s += ' | '
             for card in ResourceCards:
                 n = player.count_resource_cards(card)
