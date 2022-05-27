@@ -44,8 +44,8 @@ from pytan.ui.state import CatanUIState
 
 
 class CatanGUI(tk.Frame):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
 
         game = Game()
         ui_state = CatanUIState(game)
@@ -62,7 +62,9 @@ class CatanGUI(tk.Frame):
 
 if __name__ == '__main__':
         
-    app = CatanGUI()
+    app = tk.Tk()
+    gui = CatanGUI(app)
+    gui.pack()
     app.mainloop()
 ```
 
