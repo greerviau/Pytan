@@ -1,16 +1,29 @@
 from pytan.core.cards import ResourceCards, DevCards, ROAD, SETTLEMENT, CITY, DEV_CARD
+from pytan.core.tiles import TileTypes
+import copy
 
 class Player(object):
-    def __init__(self, name: str, identifier: int, color: str):
+    def __init__(self, name: str, id: int, color: str, agent=''):
         # Init
         self._name = name
-        self._identifier = identifier
+        self._id = id
         self._color = color
-        self._resource_cards = []
+        self._resource_cards = {}
         self._dev_cards = []
         self._roads = 0
         self._settlements = 0
         self._cities = 0
+
+        self._production_points = 0
+        self._diversity = {
+            TileTypes.WHEAT: 0,
+            TileTypes.WOOD: 0,
+            TileTypes.SHEEP: 0,
+            TileTypes.BRICK: 0,
+            TileTypes.ORE: 0,
+        }
+
+        self._agent = agent
 
         self._vps = 0
 
@@ -29,23 +42,27 @@ class Player(object):
         return self._name
 
     @property
-    def identifier(self) -> int:
-        return self._identifier
+    def id(self) -> int:
+        return self._id
 
     @property
     def color(self) -> str:
         return self._color
 
     @property
-    def resource_cards(self) -> list[ResourceCards]:
+    def agent(self) -> str:
+        return self._agent
+
+    @property
+    def resource_cards(self) -> dict[ResourceCards, int]:
         return self._resource_cards
 
     @property
     def n_resource_cards(self) -> int:
-        return len(self._resource_cards)
+        return sum(self._resource_cards.values())
 
     @property
-    def dev_cards(self) -> list[DevCards]:
+    def dev_cards(self) -> dict[DevCards, int]:
         return self._dev_cards
 
     @property
@@ -75,6 +92,14 @@ class Player(object):
     @property
     def cities_left(self) -> int:
         return 4 - self._cities
+
+    @property
+    def production_points(self) -> int:
+        return self._production_points
+    
+    @property
+    def diversity(self) -> int:
+        return sum([1 for d in self._diversity.values() if d > 0])
 
     @property
     def victory_points(self) -> int:
@@ -124,38 +149,52 @@ class Player(object):
     def longest_road(self, b: bool):
         self._longest_road = b
 
+    def add_production_points(self, p: int):
+        self._production_points += p 
+
+    def add_diversity(self, tile_type: TileTypes):
+        if tile_type != TileTypes.DESERT:
+            self._diversity[tile_type] += 1
+
     def count_resource_cards(self, card: ResourceCards) -> int:
-        return self._resource_cards.count(card)
+        if card in self._resource_cards.keys():
+            return self._resource_cards[card]
+        return 0
 
     def add_resource_card(self, card: ResourceCards):
-        self._resource_cards.append(card)
+        try:
+            self._resource_cards[card] += 1
+        except:
+            self._resource_cards[card] = 1
 
     def add_resource_cards(self, cards: list[tuple[ResourceCards, int]]):
         for card, n in cards:
-            for _ in range(n):
-                self._resource_cards.append(card)
+            try:
+                self._resource_cards[card] += n
+            except:
+                self._resource_cards[card] = n
 
     def remove_resource_card(self, card: ResourceCards):
         try:
-            self._resource_cards.remove(card)
-        except ValueError:
+            self._resource_cards[card] -= 1
+        except:
             pass
 
     def remove_all_resource_card(self, card: ResourceCards) -> int:
-        og_len = len(self._resource_cards)
-        self._resource_cards = [c for c in self._resource_cards if c != card]
-        return og_len - len(self._resource_cards)
+        og_len = self.n_resource_cards
+        self._resource_cards[card] = 0
+        return og_len - self.n_resource_cards
 
     def remove_resource_cards(self, cards: list[tuple[ResourceCards, int]]):
         for card, n in cards:
-            for _ in range(n):
-                self.remove_resource_card(card)
+            try:
+                self._resource_cards[card] -= n
+            except:
+                pass
 
     def are_cards_in_hand(self, cards_needed: tuple[ResourceCards, int]) -> bool:
         card, n = cards_needed
-        if self._resource_cards.count(card) < n:
-            return False
-        return True
+        return self.count_resource_cards(card) >= n
 
     def are_multiple_cards_in_hand(self, cards_needed: list[tuple[ResourceCards, int]]) -> bool:
         for c in cards_needed:
@@ -235,7 +274,57 @@ class Player(object):
         return False
 
     def clone_player(self) -> 'Player':
-        return Player(self._name, self._identifier, self._color)
+        return Player(self._name, self._id, self._color, self._agent)
+
+    def get_state(self) -> dict:
+        return {
+            'name': self._name,
+            'id': self._id,
+            'color': self._color,
+            'resource_cards': self._resource_cards.copy(),
+            'dev_cards': self._dev_cards.copy(),
+            'roads': self._roads,
+            'settlements': self._settlements,
+            'cities': self._cities,
+            'production_points': self._production_points,
+            'diversity': self._diversity.copy(),
+            'agent': copy.copy(self._agent),
+            'vps': self._vps,
+            'knights_played': self._knights_played,
+            'longest_road_chain': self._longest_road_chain,
+            'largest_army': self._largest_army,
+            'longest_road': self._longest_road,
+            'last_road_built': self._last_road_built,
+            'last_settlement_built': self._last_settlement_built,
+            'last_city_built': self._last_city_built
+        }
+
+    def restore(self, state: dict):
+        self._name = state['name']
+        self._id = state['id']
+        self._color = state['color']
+        self._resource_cards = state['resource_cards'].copy()
+        self._dev_cards = state['dev_cards'].copy()
+        self._roads = state['roads']
+        self._settlements = state['settlements']
+        self._cities = state['cities']
+        self._production_points = state['production_points']
+        self._diversity = state['diversity'].copy()
+        self._agent = copy.copy(state['agent'])
+        self._vps = state['vps']
+        self._knights_played = state['knights_played']
+        self._longest_road_chain = state['longest_road_chain']
+        self._largest_army = state['largest_army']
+        self._longest_road = state['longest_road']
+        self._last_road_built = state['last_road_built']
+        self._last_settlement_built = state['last_settlement_built']
+        self._last_city_built = state['last_city_built']
+    
+    @staticmethod
+    def create_from_state(state: dict) -> 'Player':
+        player = Player('', '', 0)
+        player.restore(state)
+        return player
 
     def __repr__(self):
         return f'{self._name} ({self._color})'

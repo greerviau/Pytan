@@ -76,8 +76,10 @@ class Logger(object):
                     str_params.append(f'[{l_s}]')
                 elif type(param) == Player:
                     str_params.append(param.name)
-                    str_params.append(param.identifier)
+                    str_params.append(param.id)
                     str_params.append(param.color)
+                    if param.agent:
+                        str_params.append(param.agent.__class__)
                 elif type(param) in [ResourceCards, DevCards]:
                     str_params.append(param.value)
                 elif type(param) in [int, float, bool, str]:
@@ -121,3 +123,27 @@ class Logger(object):
         
         log_file.close()
         log_file = None
+
+    def get_state(self) -> dict:
+        return {
+            'console_log': self.console_log,
+            'raw_log': self.raw_log,
+            'log_path': self._log_path,
+            'all_logs': self._all_logs.copy(),
+            'raw_logs': self._raw_logs.copy(),
+            'start': self._start
+        }
+
+    def restore(self, state: dict):
+        self.console_log = state['console_log']
+        self.raw_log = state['raw_log']
+        self.log_path = state['log_path']
+        self._all_logs = state['all_logs'].copy()
+        self._raw_logs = state['raw_logs'].copy()
+        self._start = state['start']
+
+    @staticmethod
+    def create_from_state(state: dict):
+        logger = Logger()
+        logger.restore(state)
+        return logger

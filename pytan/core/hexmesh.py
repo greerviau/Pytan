@@ -125,7 +125,6 @@ class HexMesh(object):
         self._init_tiles()
         self.init_nodes()
         self.init_edges()
-    
 
     def _init_tiles(self):
         self._tiles = {}

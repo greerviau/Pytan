@@ -1,87 +1,18 @@
 from pytan.core import hexmesh
 from pytan.core.hexmesh import Directions
-from pytan.core.player import Player
 from pytan.core.piece import PieceTypes, Piece
 from pytan.core.cards import ResourceCards
 from pytan.core.trading import PortTypes, Port, PORT_TYPE_COUNTS
-from enum import Enum
+from pytan.core.tiles import *
+from pytan.core.player import Player
 import random
-
-class TileTypes(Enum):
-    WHEAT = 'WHEAT'
-    WOOD = 'WOOD'
-    SHEEP = 'SHEEP'
-    ORE = 'ORE'
-    BRICK = 'BRICK'
-    DESERT = 'DESERT'
-
-TILE_COUNTS = {
-    TileTypes.WHEAT: 4,
-    TileTypes.WOOD: 4,
-    TileTypes.SHEEP: 4,
-    TileTypes.ORE: 3,
-    TileTypes.BRICK: 3,
-    TileTypes.DESERT: 1
-}
-
-PROB_COUNTS = {
-    2: 1,
-    3: 2,
-    4: 2,
-    5: 2,
-    6: 2,
-    8: 2,
-    9: 2,
-    10: 2,
-    11: 2,
-    12: 1
-}
-
-PROB_TO_PROD = {
-    2: 1,
-    3: 2,
-    4: 3,
-    5: 4,
-    6: 5,
-    7: 0,
-    8: 5,
-    9: 4,
-    10: 3,
-    11: 2,
-    12: 1
-}
-
-class CatanTile(object):
-    def __init__(self, coord: int, prob: int, tile_type: TileTypes):
-        self._coord = coord
-        self._prob = prob 
-        self._tile_type = tile_type
-        self._prod_points = PROB_TO_PROD[prob]
-
-    @property
-    def coord(self) -> int:
-        return self._coord
-
-    @property
-    def prob(self) -> int:
-        return self._prob
-
-    @property
-    def prod_points(self) -> int:
-        return self._prod_points
-
-    @property
-    def tile_type(self) -> TileTypes:
-        return self._tile_type
-
-    def __repr__(self):
-        return f'<Tile Type: {self._tile_type} - Coord: {hex(self._coord)} - Prob: {self._prob}>'
+import copy
 
 class Board(hexmesh.HexMesh):
     def __init__(self, seed=random.random()):
         super().__init__(n_layers = 2)
+        self._prng = random.Random()
         self.set_seed(seed)
-        random.seed(self._seed)
         
         self.setup_tiles()
         self.setup_ports()
@@ -93,7 +24,7 @@ class Board(hexmesh.HexMesh):
 
     def set_seed(self, seed: int):
         self._seed = seed
-        random.seed(self._seed)
+        self._prng.seed(self._seed)
 
     def setup_tiles(self):
         self._robber = None
@@ -119,9 +50,9 @@ class Board(hexmesh.HexMesh):
                 prob = random.choice(available_probs)
                 available_probs.remove(prob)
             else:
-                self._robber = Piece(coord, None, PieceTypes.ROBBER)
+                self._robber = Piece(coord, -1, '', 'black', PieceTypes.ROBBER)
 
-            self._tiles[coord] = CatanTile(coord, prob, tile_type)
+            self._tiles[coord] = CatanTile(coord, prob, tile_type, PROB_TO_PROD[prob])
 
     def setup_ports(self, rotate=0):
         self._ports = {}
@@ -179,7 +110,7 @@ class Board(hexmesh.HexMesh):
             if port.port_type == port_type:
                 p1 = self._nodes[port.coord_1]
                 p2 = self._nodes[port.coord_2]
-                if (type(p1) == Piece and p1.owner_id == player_id) or (type(p2) == Piece and p2.owner_id == player_id):
+                if (type(p1) == Piece and p1.owner_id == player_id) or (type(p2) == Piece  and p2.owner_id == player_id):
                     return True
         return False
 
@@ -187,17 +118,17 @@ class Board(hexmesh.HexMesh):
         return [coord for coord, tile in self._tiles.items() if coord != self._robber.coord]
 
     def move_robber(self, coord: int):
-        self._robber = Piece(coord, None, PieceTypes.ROBBER)
+        self._robber = Piece(coord, -1, '', 'black', PieceTypes.ROBBER)
 
     def tiles_with_prob(self, prob: int) -> dict[int, CatanTile]:
         return {coord: tile for coord, tile in self._tiles.items() if type(tile) == CatanTile and tile.prob == prob}
 
-    def players_on_tile(self, tile_coord: int) -> list[Player]:
-        players = set()
+    def players_on_tile(self, tile_coord: int) -> list[int]:
+        player_ids = set()
         for node_coord in self.tile_neighboring_nodes(tile_coord):
             node = self._nodes[node_coord]
             if type(node) == Piece:
-                players.add(node.owner)
+                player_ids.add(node.owner)
         return list(players)
 
     def settlements_on_tile(self, tile_coord: int) -> dict[int, Piece]:
@@ -301,23 +232,23 @@ class Board(hexmesh.HexMesh):
 
     def build_road(self, edge_coord: int, player: Player) -> bool:
         edge = self._edges[edge_coord]
-        if edge == None:
-            self._edges[edge_coord] = Piece(edge_coord, player, PieceTypes.ROAD)
+        if not edge:
+            self._edges[edge_coord] = Piece(edge_coord, player.id, player.name, player.color, PieceTypes.ROAD)
             return True
         return False
         
     def build_settlement(self, node_coord: int, player: Player) -> bool:
         node = self._nodes[node_coord]
-        if node == None:
-            self._nodes[node_coord] = Piece(node_coord, player, PieceTypes.SETTLEMENT)
+        if not node:
+            self._nodes[node_coord] = Piece(node_coord, player.id, player.name, player.color, PieceTypes.SETTLEMENT)
             return True
         return False
     
     def build_city(self, node_coord: int, player: Player) -> bool:
         node = self._nodes[node_coord]
         if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT:
-            if node.owner_id == player.identifier:
-                self._nodes[node_coord] = Piece(node_coord, player, PieceTypes.CITY)
+            if node.owner_id == player.id:
+                self._nodes[node_coord] = Piece(node_coord, player.id, player.name, player.color, PieceTypes.CITY)
                 return True
         return False
 
@@ -352,6 +283,34 @@ class Board(hexmesh.HexMesh):
             for neighbor in neighbors:
                 self._explore_road(neighbor, player_id, explored, chain_length, parent_neighbors=parent_neighbors)    
 
+    def get_state(self) -> dict:
+        return {
+            'tiles': self._tiles.copy(),
+            'nodes': self._nodes.copy(),
+            'edges': self._edges.copy(),
+            'ports': self._ports.copy(),
+            'n_tiles': self._n_tiles,
+            'n_layers': self._n_layers,
+            'robber': copy.copy(self._robber),
+            'seed': self._seed,
+        }
+
+    def restore(self, state: dict):
+        self._tiles = state['tiles'].copy()
+        self._nodes = state['nodes'].copy()
+        self._edges = state['edges'].copy()
+        self._ports = state['ports'].copy()
+        self._n_tiles = state['n_tiles']
+        self._n_layers = state['n_layers']
+        self._robber = copy.copy(state['robber'])
+        self._seed = state['seed']
+
+    @staticmethod
+    def create_from_state(state: dict):
+        board = Board()
+        board.restore(state)
+        return board
+
     def __repr__(self):
         s = 'Board\n\n'
         s += 'Tiles:\n'
@@ -365,38 +324,38 @@ class Board(hexmesh.HexMesh):
 
         for edge in self._edges.values():
             if type(edge) == Piece:
-                o_id = edge.owner
+                o_id = edge.owner_id
                 if o_id not in player_roads:
                     player_roads[o_id] = []
                 player_roads[o_id].append(edge)
 
         for node in self._nodes.values():
             if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT:
-                o_id = node.owner
+                o_id = node.owner_id
                 if o_id not in player_settlements:
                     player_settlements[o_id] = []
                 player_settlements[o_id].append(node)
 
         for node in self._nodes.values():
             if type(node) == Piece and node.piece_type == PieceTypes.CITY:
-                o_id = node.data.owner
+                o_id = node.owner_id
                 if o_id not in player_settlements:
                     player_cities[o_id] = []
                 player_cities[o_id].append(node)
 
         s += '\nRoads:\n'
-        for player in player_roads:
-            for road in player_roads[player]:
+        for p_id in player_roads:
+            for road in player_roads[p_id]:
                 s += f'{road}\n'
 
         s += '\nSettlements:\n'
-        for player in player_settlements:
-            for settlement in player_settlements[player]:
+        for p_id in player_settlements:
+            for settlement in player_settlements[p_id]:
                 s += f'{settlement}\n'
         
         s += '\nCities:\n'
-        for player in player_cities:
-            for city in player_cities[player]:
+        for p_id in player_cities:
+            for city in player_cities[p_id]:
                 s += f'{city}\n'
         
         return s

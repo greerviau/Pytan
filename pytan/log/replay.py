@@ -18,18 +18,18 @@ class Replay(object):
         self._game = Game(logger=Logger(raw_log=False, console_log=console_log))
 
     @property
-    def game(self):
+    def game(self) -> Game:
         return self._game
     
     @property
-    def has_next(self):
+    def has_next(self) -> bool:
         return self._log_idx < len(self._log_list) - 1 or self._game.can_redo
 
     @property
-    def has_last(self):
+    def has_last(self) -> bool:
         return self._log_idx > 0 and self._game.can_undo
 
-    def _parse_params(self, params_str):
+    def _parse_params(self, params_str: str) -> list[None]:
         params_str_list = params_str.split(',')
         params = []
         for p_s in params_str_list:
@@ -77,7 +77,7 @@ class Replay(object):
                 params.append(p_s)
         return params
 
-    def get_log(self, idx):
+    def get_log(self, idx: int) -> tuple[str, list[None]]:
         log = self._log_list[idx]
         log = log.replace('\n','')
         log = log.strip()

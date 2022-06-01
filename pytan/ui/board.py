@@ -10,13 +10,16 @@ from pytan.core.piece import Piece, PieceTypes
 from pytan.ui.state import CatanUIState, UIStates
 
 class BoardFrame(tk.Frame):
-    def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState, interact=True):
+    def __init__(self, master: tk.Frame, game: Game, ui_state = None, interact=True):
         tk.Frame.__init__(self, master)
         self.master = master
         self.game = game
         self.game.add_observer(self)
 
         self.ui_state = ui_state
+        if not self.ui_state:
+            self.ui_state = CatanUIState(game)
+            self.ui_state = UIStates.INGAME
 
         self._interact = interact
         
@@ -214,7 +217,7 @@ class BoardFrame(tk.Frame):
         }
         color = 'black'
         try:
-            color = piece.owner.color
+            color = piece.color
         except:
             pass
 
