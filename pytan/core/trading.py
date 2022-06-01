@@ -1,5 +1,5 @@
 from enum import Enum
-from pytan.core.hexmesh import Directions
+from collections import namedtuple
 from pytan.core.cards import ResourceCards
 
 class PortTypes(Enum):
@@ -28,6 +28,9 @@ PORT_TYPE_COUNTS = {
     PortTypes.ANY: 4
 }
 
+Port = namedtuple('Port', ['coord_1', 'coord_2', 'tile', 'direction', 'port_type'])
+
+'''
 class Port(object):
     def __init__(self, coord_1: int, coord_2: int, tile: int, direction: Directions, port_type: PortTypes):
         self._coord_1 = coord_1
@@ -72,3 +75,4 @@ class Port(object):
     
     def __repr__(self):
         return f'<Port Type: {self._port_type} - Coords: {hex(self._coord_1)}:{hex(self._coord_2)} - Tile: {self._tile}>'
+'''
