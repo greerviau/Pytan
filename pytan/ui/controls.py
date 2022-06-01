@@ -171,7 +171,7 @@ class PlayerLabelFrame(tk.Frame):
         self._cur_player = self.game.current_player
         for pl, player_s, player in zip(self.player_labels, self._players, self.game.players):
             s = ''
-            if player.identifier == self._cur_player.identifier:
+            if player.id == self._cur_player.id:
                 pl.config(fg='red')
             else:
                 pl.config(fg='white')
@@ -740,7 +740,7 @@ class StealFrame(tk.LabelFrame):
 
         players = self.game.players_to_steal_from
         for p in players:
-            b = tk.Button(self, command=lambda I=p.identifier: self.on_button(I), width=10, text=str(p))
+            b = tk.Button(self, command=lambda I=p.id: self.on_button(I), width=10, text=str(p))
             b.pack()
 
     def on_button(self, player_id: int):
@@ -822,7 +822,7 @@ class TradingFrame(tk.LabelFrame):
         self.player_vars = {}
         i = 0
         for p in self.game.other_players:
-            pid = p.identifier
+            pid = p.id
             self.player_vars[pid] = tk.BooleanVar()
             self.player_vars[pid].set(True)
             self.selected_players.append(pid)
@@ -876,11 +876,11 @@ class TradingFrame(tk.LabelFrame):
                 return
             port = PortTypes(order[give.index(non_zero_give[0])])
             if non_zero_give[0] == 2 and non_zero_want[0] == 1:
-                if self.game.board.is_player_on_port(self.game.current_player.identifier, port):
+                if self.game.board.is_player_on_port(self.game.current_player.id, port):
                     self.set_bank()
                     return
             if non_zero_give[0] == 3 and non_zero_want[0] == 1:
-                if self.game.board.is_player_on_port(self.game.current_player.identifier, PortTypes.ANY):
+                if self.game.board.is_player_on_port(self.game.current_player.id, PortTypes.ANY):
                     self.set_bank()
                     return
         if self.bank_var.get():
@@ -967,7 +967,7 @@ class ConfirmTradeFrame(tk.LabelFrame):
 
         players = self.game.players_accepted_trade
         for p in players:
-            b = tk.Button(self, command=lambda I=p.identifier: self.on_button(I), width=10, text=str(p))
+            b = tk.Button(self, command=lambda I=p.id: self.on_button(I), width=10, text=str(p))
             b.pack()
 
     def on_button(self, player_id: int):
