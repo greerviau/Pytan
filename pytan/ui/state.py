@@ -7,7 +7,6 @@ class UIStates(Enum):
     BUILDING_ROAD = 'BUILDING_ROAD'
     BUILDING_SETTLEMENT = 'BUILDING_SETTLEMENT'
     BUILDING_CITY = 'BUILDING_CITY'
-    DISCARDING = 'DISCARDING'
     CREATING_TRADE = 'CREATING_TRADE'
     MONOPOLY = 'MONOPOLY'
     YEAR_PLENTY = 'YEAR_PLENTY'
@@ -35,19 +34,23 @@ class CatanUIState(object):
         return self._state == UIStates.INGAME
 
     def is_building_road(self) -> bool:
-        return self._state == UIStates.BUILDING_ROAD or self.game.state in [GameStates.STARTING_ROAD, GameStates.ROADBUILDER]
+        return self._state == UIStates.BUILDING_ROAD or \
+                self.game.state in [GameStates.STARTING_ROAD, GameStates.ROADBUILDER] \
+                and not self.game.current_turn_player.agent
 
     def is_building_settlement(self) -> bool:
-        return self._state == UIStates.BUILDING_SETTLEMENT or self.game.state == GameStates.STARTING_SETTLEMENT
+        return self._state == UIStates.BUILDING_SETTLEMENT \
+                or self.game.state == GameStates.STARTING_SETTLEMENT \
+                and not self.game.current_turn_player.agent
     
     def is_building_city(self) -> bool:
-        return self._state == UIStates.BUILDING_CITY
+        return self._state == UIStates.BUILDING_CITY and not self.game.current_turn_player.agent
 
     def is_creating_trading(self) -> bool:
-        return self._state == UIStates.CREATING_TRADE
+        return self._state == UIStates.CREATING_TRADE and not self.game.current_turn_player.agent
 
     def is_moving_robber(self) -> bool:
-        return self.game.state == GameStates.MOVING_ROBBER
+        return self.game.state == GameStates.MOVING_ROBBER and not self.game.current_turn_player.agent
 
     def is_playing_monopoly(self) -> bool:
         return self._state == UIStates.MONOPOLY
@@ -56,40 +59,50 @@ class CatanUIState(object):
         return self._state == UIStates.YEAR_PLENTY
 
     def can_roll(self) -> bool:
-        return self._state == UIStates.INGAME and self.game.state.can_roll()
+        return self._state == UIStates.INGAME and self.game.state.can_roll() and not self.game.current_turn_player.agent
 
     def can_pass_turn(self) -> bool:
-        return self._state == UIStates.INGAME and self.game.state.can_pass_turn()
+        return self._state == UIStates.INGAME and self.game.state.can_pass_turn() and not self.game.current_turn_player.agent
 
     def can_cancel(self) -> bool:
         return (self.is_building_road() and self.game.state != GameStates.STARTING_ROAD) \
                 or (self.is_building_settlement() and self.game.state != GameStates.STARTING_SETTLEMENT) \
                 or self.is_building_city() \
-                or self._state in [UIStates.YEAR_PLENTY, UIStates.MONOPOLY]
+                or self._state in [UIStates.YEAR_PLENTY, UIStates.MONOPOLY] \
+                and not self.game.current_turn_player.agent
 
     def can_build_road(self) -> bool:
-        return not self.is_building_road() and self.game.state.can_build_road()
+        return not self.is_building_road() and self.game.state.can_build_road() \
+                and not self.game.current_turn_player.agent
 
     def can_build_settlement(self) -> bool:
-        return not self.is_building_settlement() and self.game.state.can_build_settlement()
+        return not self.is_building_settlement() and self.game.state.can_build_settlement() \
+                and not self.game.current_turn_player.agent
 
     def can_build_city(self) -> bool:
-        return not self.is_building_city() and self.game.state.can_build_city()
+        return not self.is_building_city() and self.game.state.can_build_city() \
+                and not self.game.current_turn_player.agent
 
     def can_buy_dev_card(self) -> bool:
-        return self._state == UIStates.INGAME and self.game.state.can_buy_dev_card()
+        return self._state == UIStates.INGAME and self.game.state.can_buy_dev_card() \
+                and not self.game.current_turn_player.agent
 
     def can_play_knight(self) -> bool:
-        return self._state == UIStates.INGAME and self.game.state.can_play_knight()
+        return self._state == UIStates.INGAME and self.game.state.can_play_knight() \
+                and not self.game.current_turn_player.agent
     
     def can_play_monopoly(self) -> bool:
-        return self._state == UIStates.INGAME and self.game.state.can_play_monopoly()
+        return self._state == UIStates.INGAME and self.game.state.can_play_monopoly() \
+                and not self.game.current_turn_player.agent
     
     def can_play_road_builder(self) -> bool:
-        return self._state == UIStates.INGAME and self.game.state.can_play_road_builder()
+        return self._state == UIStates.INGAME and self.game.state.can_play_road_builder() \
+                and not self.game.current_turn_player.agent
     
     def can_play_year_plenty(self) -> bool:
-        return self._state == UIStates.INGAME and self.game.state.can_play_year_plenty()
+        return self._state == UIStates.INGAME and self.game.state.can_play_year_plenty() \
+                and not self.game.current_turn_player.agent
     
     def can_trade(self) -> bool:
-        return self._state == UIStates.INGAME and self.game.state.can_trade()
+        return self._state == UIStates.INGAME and self.game.state.can_trade() \
+                and not self.game.current_turn_player.agent

@@ -1,6 +1,5 @@
 import tkinter as tk
 from pytan.core.game import Game
-from pytan.log.logging import Logger
 from pytan.ui.board import BoardFrame
 from pytan.ui.controls import GameControlsFrame, PlayerLabelFrame, LogFrame
 from pytan.ui.state import CatanUIState
@@ -20,6 +19,8 @@ class RightSide(tk.Frame):
     def __init__(self, master, game, ui_state):
         tk.Frame.__init__(self, master)
 
+        self.game = game
+
         controls_frame = GameControlsFrame(self, game, ui_state)
         log_frame = LogFrame(self, game, ui_state, height=12)
         controls_frame.pack(pady=10, fill=tk.X, side=tk.TOP)
@@ -29,7 +30,7 @@ class RightSide(tk.Frame):
 
 if __name__ == '__main__':
 
-    game = Game(logger=Logger())
+    game = Game()
     ui_state = CatanUIState(game)
         
     app = tk.Tk()
