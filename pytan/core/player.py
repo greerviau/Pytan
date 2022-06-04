@@ -1,5 +1,6 @@
 from pytan.core.cards import ResourceCards, DevCards, ROAD, SETTLEMENT, CITY, DEV_CARD
-from pytan.core.tiles import TileTypes
+from pytan.core.tiles import CatanTile, TileTypes
+from collections import defaultdict
 import copy
 
 class Player(object):
@@ -8,20 +9,15 @@ class Player(object):
         self._name = name
         self._id = id
         self._color = color
-        self._resource_cards = {}
+        self._resource_cards = defaultdict(int)
         self._dev_cards = []
         self._roads = 0
         self._settlements = 0
         self._cities = 0
 
-        self._production_points = 0
-        self._diversity = {
-            TileTypes.WHEAT: 0,
-            TileTypes.WOOD: 0,
-            TileTypes.SHEEP: 0,
-            TileTypes.BRICK: 0,
-            TileTypes.ORE: 0,
-        }
+        self._resource_production = defaultdict(int)
+
+        self._diversity = defaultdict(int)
 
         self._agent = agent
 
@@ -56,6 +52,13 @@ class Player(object):
     @property
     def resource_cards(self) -> dict[ResourceCards, int]:
         return self._resource_cards
+
+    @property
+    def resource_cards_list(self) -> list[ResourceCards]:
+        l = []
+        for card, count in self._resource_cards.items():
+            l.extend([card for _ in range(count)])
+        return l
 
     @property
     def n_resource_cards(self) -> int:
@@ -94,16 +97,30 @@ class Player(object):
         return 4 - self._cities
 
     @property
+    def resource_production(self) -> dict:
+        return self._resource_production
+
+    @property
     def production_points(self) -> int:
-        return self._production_points
+        return sum(list(self._resource_production.values()))
+
+    @property
+    def pp_score(self) -> float:
+        s = self._settlements if self._settlements > 0 else 1
+        return self.production_points / s
+
+    @property
+    def diversity(self) -> dict:
+        return self._diversity
     
     @property
-    def diversity(self) -> int:
-        return sum([1 for d in self._diversity.values() if d > 0])
+    def diversity_score(self) -> float:
+        m = max(self._diversity.values()) if sum(self._diversity.values()) > 0 else 1
+        return sum([d / m for d in self._diversity.values()])
 
     @property
     def victory_points(self) -> int:
-        return self.settlements + (self._cities * 2) + (self._largest_army * 2) + (self._longest_road * 2)
+        return self._settlements + (self._cities * 2) + (self._largest_army * 2) + (self._longest_road * 2)
 
     @property
     def total_victory_points(self) -> int:
@@ -149,12 +166,14 @@ class Player(object):
     def longest_road(self, b: bool):
         self._longest_road = b
 
-    def add_production_points(self, p: int):
-        self._production_points += p 
-
-    def add_diversity(self, tile_type: TileTypes):
+    def add_tile(self, tile: CatanTile):
+        tile_type = tile.tile_type
+        prod = tile.prod_points
         if tile_type != TileTypes.DESERT:
             self._diversity[tile_type] += 1
+            self._resource_production[tile_type] += prod
+        else:
+            self._diversity[tile_type] -= 1
 
     def count_resource_cards(self, card: ResourceCards) -> int:
         if card in self._resource_cards.keys():
@@ -264,7 +283,8 @@ class Player(object):
     def can_play_road_builder(self, turn: int) -> bool:
         for card, t in self._dev_cards:
             if card == DevCards.ROADBUILDER and t < turn:
-                return True
+                if self.roads_left >= 2:
+                    return True
         return False
 
     def can_play_plenty(self, turn: int) -> bool:
@@ -286,7 +306,7 @@ class Player(object):
             'roads': self._roads,
             'settlements': self._settlements,
             'cities': self._cities,
-            'production_points': self._production_points,
+            'resource_production': self._resource_production.copy(),
             'diversity': self._diversity.copy(),
             'agent': copy.copy(self._agent),
             'vps': self._vps,
@@ -308,7 +328,7 @@ class Player(object):
         self._roads = state['roads']
         self._settlements = state['settlements']
         self._cities = state['cities']
-        self._production_points = state['production_points']
+        self._resource_production = state['resource_production'].copy()
         self._diversity = state['diversity'].copy()
         self._agent = copy.copy(state['agent'])
         self._vps = state['vps']

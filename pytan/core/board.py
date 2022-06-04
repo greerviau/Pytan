@@ -114,6 +114,14 @@ class Board(hexmesh.HexMesh):
                     return True
         return False
 
+    def is_player_on_tile(self, tile_coord: int, player_id: int) -> bool:
+        for node_coord in self.tile_neighboring_nodes(tile_coord):
+            node = self._nodes[node_coord]
+            if type(node) == Piece:
+                if player_id == node.owner_id:
+                    return True
+        return False
+
     def legal_robber_placements(self) -> list[int]:
         return [coord for coord, tile in self._tiles.items() if coord != self._robber.coord]
 
@@ -128,8 +136,8 @@ class Board(hexmesh.HexMesh):
         for node_coord in self.tile_neighboring_nodes(tile_coord):
             node = self._nodes[node_coord]
             if type(node) == Piece:
-                player_ids.add(node.owner)
-        return list(players)
+                player_ids.add(node.owner_id)
+        return list(player_ids)
 
     def settlements_on_tile(self, tile_coord: int) -> dict[int, Piece]:
         settlements = {}
@@ -259,7 +267,7 @@ class Board(hexmesh.HexMesh):
         roads = list(self.friendly_roads(player_id).keys())
         longest_chain = 0
         explored = set()
-        while any(roads):
+        while roads:
             chain_length = [1]
             self._explore_road(roads[0], player_id, explored, chain_length)
             if chain_length[0] > longest_chain:
@@ -272,13 +280,13 @@ class Board(hexmesh.HexMesh):
         neighbors = self._neighboring_friendly_roads(road_coord, player_id)
         if chain_length[0] == 1:
             parent_neighbors = neighbors.copy()
-        elif chain_length[0] == 2 and any([n for n in parent_neighbors if n not in neighbors and road_coord != n]):
+        elif chain_length[0] == 2 and [n for n in parent_neighbors if n not in neighbors and road_coord != n]:
             chain_length[0] += 1
         else:
             parent_neighbors = []
         neighbors = [n for n in neighbors if n not in explored]
         explored.update(neighbors)
-        if any(neighbors):
+        if neighbors:
             chain_length[0] += 1
             for neighbor in neighbors:
                 self._explore_road(neighbor, player_id, explored, chain_length, parent_neighbors=parent_neighbors)    
