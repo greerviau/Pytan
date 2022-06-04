@@ -190,7 +190,7 @@ class PlayerLabelFrame(tk.Frame):
                     if n > 1:
                         s += f'{n}x'
                     s += f'{abrv}'
-            if any(player.dev_cards):
+            if player.dev_cards:
                 s += ' |'
             for card in DevCards:
                 n = player.count_dev_cards(card)
@@ -658,11 +658,7 @@ class YearPlentyFrame(tk.LabelFrame):
 
     def on_confirm(self, card_n: int):
         self.master.clear_year_plenty()
-        pickup_list = []
-        pickup_list.append((self._resource_1, 1))
-        pickup_list.append((self._resource_2, 1))
-
-        self.game.play_year_plenty(pickup_list)
+        self.game.play_year_plenty(self._resource_1, self._resource_2)
 
 class DiscardFrame(tk.LabelFrame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):

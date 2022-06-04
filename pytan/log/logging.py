@@ -27,7 +27,7 @@ LOG_CODES = {
     'play_knight': '{}',
     'play_monopoly': '{}={}',
     'play_road_builder': '{}',
-    'play_year_plenty': '{}={}'
+    'play_year_plenty': '{}={},{}'
 }
 
 class Logger(object):

@@ -10,7 +10,7 @@ from pytan.core.piece import Piece, PieceTypes
 from pytan.ui.state import CatanUIState, UIStates
 
 class BoardFrame(tk.Frame):
-    def __init__(self, master: tk.Frame, game: Game, ui_state = None):
+    def __init__(self, master: tk.Frame, game: Game, ui_state = None, interact=True):
         tk.Frame.__init__(self, master)
         self.master = master
         self.game = game
@@ -21,30 +21,33 @@ class BoardFrame(tk.Frame):
             self.ui_state = CatanUIState(game)
             self.ui_state.set_state(UIStates.INGAME)
         
+        self._interact = interact
+        
         self._board_canvas = tk.Canvas(self, height=600, width=600, bg='#24AAFA')
         self._board_canvas.pack(expand=tk.YES, fill=tk.BOTH)
 
         self._center_to_edge = math.cos(math.radians(30)) * self._tile_radius
 
     def piece_click(self, piece_type, event):
-        tags = self._board_canvas.gettags(event.widget.find_closest(event.x, event.y))
-        # avoid processing tile clicks
-        tag = None
-        for t in tags:
-            if 'tile' not in t:
-                tag = t
-                break
-        if tag is not None:
-            self.ui_state.set_state(UIStates.INGAME)
-            if piece_type == PieceTypes.ROAD:
-                self.game.build_road(self._coord_from_road_tag(tag))
-            elif piece_type == PieceTypes.SETTLEMENT:
-                self.game.build_settlement(self._coord_from_settlement_tag(tag))
-            elif piece_type == PieceTypes.CITY:
-                self.game.build_city(self._coord_from_city_tag(tag))
-            elif piece_type == PieceTypes.ROBBER:
-                self.game.move_robber(self._coord_from_robber_tag(tag))
-            self.redraw()
+        if self._interact:
+            tags = self._board_canvas.gettags(event.widget.find_closest(event.x, event.y))
+            # avoid processing tile clicks
+            tag = None
+            for t in tags:
+                if 'tile' not in t:
+                    tag = t
+                    break
+            if tag is not None:
+                self.ui_state.set_state(UIStates.INGAME)
+                if piece_type == PieceTypes.ROAD:
+                    self.game.build_road(self._coord_from_road_tag(tag))
+                elif piece_type == PieceTypes.SETTLEMENT:
+                    self.game.build_settlement(self._coord_from_settlement_tag(tag))
+                elif piece_type == PieceTypes.CITY:
+                    self.game.build_city(self._coord_from_city_tag(tag))
+                elif piece_type == PieceTypes.ROBBER:
+                    self.game.move_robber(self._coord_from_robber_tag(tag))
+                self.redraw()
 
     def notify(self, observable):
         self.redraw()
@@ -58,14 +61,15 @@ class BoardFrame(tk.Frame):
             self._draw_ports(board, terrain_centers)  
         
         self._draw_pieces(board, terrain_centers)
-        if self.ui_state.is_building_road():
-            self._draw_piece_shadows(PieceTypes.ROAD, board, terrain_centers)
-        if self.ui_state.is_building_settlement():
-            self._draw_piece_shadows(PieceTypes.SETTLEMENT, board, terrain_centers)
-        if self.ui_state.is_building_city():
-            self._draw_piece_shadows(PieceTypes.CITY, board, terrain_centers)
-        if self.ui_state.is_moving_robber():
-            self._draw_piece_shadows(PieceTypes.ROBBER, board, terrain_centers) 
+        if self._interact:
+            if self.ui_state.is_building_road():
+                self._draw_piece_shadows(PieceTypes.ROAD, board, terrain_centers)
+            if self.ui_state.is_building_settlement():
+                self._draw_piece_shadows(PieceTypes.SETTLEMENT, board, terrain_centers)
+            if self.ui_state.is_building_city():
+                self._draw_piece_shadows(PieceTypes.CITY, board, terrain_centers)
+            if self.ui_state.is_moving_robber():
+                self._draw_piece_shadows(PieceTypes.ROBBER, board, terrain_centers) 
 
     def redraw(self):
         self._board_canvas.delete(tk.ALL)

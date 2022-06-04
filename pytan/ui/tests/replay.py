@@ -11,7 +11,7 @@ class ReplayGUI(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
 
-        self.replay = Replay('../../log/test_logs/test_1.catan')
+        self.replay = Replay('../../log/test_logs/bot_game_1.catan')
         game = self.replay.game
         ui_state = CatanUIState(game)
         ui_state.set_state(UIStates.INGAME)
