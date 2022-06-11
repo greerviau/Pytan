@@ -58,30 +58,5 @@ PROB_TO_PROD = {
 
 CatanTile = namedtuple('CatanTile', ['coord', 'prob', 'tile_type', 'prod_points'])
 
-'''
-class CatanTile(object):
-    def __init__(self, coord: int, prob: int, tile_type: TileTypes):
-        self._coord = coord
-        self._prob = prob 
-        self._tile_type = tile_type
-        self._prod_points = PROB_TO_PROD[prob]
-
-    @property
-    def coord(self) -> int:
-        return self._coord
-
-    @property
-    def prob(self) -> int:
-        return self._prob
-
-    @property
-    def prod_points(self) -> int:
-        return self._prod_points
-
-    @property
-    def tile_type(self) -> TileTypes:
-        return self._tile_type
-
-    def __repr__(self):
-        return f'<Tile Type: {self._tile_type} - Coord: {hex(self._coord)} - Prob: {self._prob}>'
-'''
+def create_tile(coord: int, prob: int, tile_type: TileTypes, prod_points: int):
+    return CatanTile(coord, prob, tile_type, prod_points)
