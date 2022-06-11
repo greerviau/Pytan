@@ -18,13 +18,35 @@ catan.start_game()
 catan.build_settlement(0x67)
 catan.build_road(0x67)
 ...
-catan.pass_turn()
 catan.roll()
+catan.pass_turn()
 ...
+# Build City
+catan.build_city(0x67)
+...
+# Roll 7, discard and move robber
 catan.roll(7)
-catan.discard([(RC.WHEAT,2), (RC.WOOD,1), (RC,ORE,3)])
+catan.discard([(RC.WHEAT,2), (RC.WOOD,1), (RC.ORE,3)])
 catan.move_robber(0x11)
 catan.steal(1) # player id
+...
+# Trading
+catan.offer_trade([(RC.WHEAT, 1)], [(RC.WOOD, 1)], [0,1,3]) # params(offer, want, player_ids)
+# player (0) turn, accept/decline trade?
+catan.decline_trade()
+# player (1) turn, accept/decline trade?
+catan.accept_trade()
+# player (3) turn, accept/decline trade?
+catan.accept_trade()
+# player (2) turn, trade with player (1) or player (3)?
+catan.confirm_trade(1)
+...
+# Dev Cards
+catan.buy_dev_card()
+catan.play_knight()
+catan.play_monopoly(RC.WHEAT)
+catan.play_year_plenty(RC.WOOD, RC.BRICK)
+catan.play_road_builder()
 ...
 catan.end_game(log=True)
 ```
@@ -70,9 +92,10 @@ if __name__ == '__main__':
 
 ## TODO
 - [x] Seperate Game States and UI States
-- [ ] Complete Core Gameplay Logic
+- [x] Complete Core Gameplay Logic
 - [x] Complete State Management
 - [x] Complete GUI
+- [x] Build Replay System
 - [ ] Build GYM Environment for RL
 
 ## References
