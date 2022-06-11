@@ -1,7 +1,7 @@
 from pytan.core.game import Game
 from pytan.core.cards import ResourceCards
 from pytan.core.state import GameStates
-from pytan.core.trading import PortTypes
+from pytan.core.ports import PortTypes
 from pytan.log.logging import Logger
 from pytan.gym.agents import BotAgent, RandomAgent, GreedyAgent
 import random
@@ -119,21 +119,21 @@ if __name__ == '__main__':
     ]
     game = CatanEnv(players, logger)
     game.start_game()
-    '''
+    
     root = tk.Tk()
     board = BoardFrame(root, game)
     board.redraw()
     board.pack()
-    '''
+    
     turns = []
     wins = [0,0,0,0]
     for i in range(100):
         game.start_game(randomize=True)
         while True:
-            if game.state == GameStates.GAME_OVER or game.turn > 500:
+            if game.state == GameStates.GAME_OVER or game.turn > 250:
                 break
             game.step()
-            #root.update()
+            root.update()
         turns.append(game.turn)
         vp = [player.total_victory_points for player in game.players]
         winner = vp.index(max(vp))
