@@ -14,6 +14,16 @@ from pytan.core.game import Game
 from pytan.core.cards import ResourceCards as RC
 
 catan = Game()
+# or specity players
+from pytan.core.player import Player
+players = [
+    # name, color, id (must be unique)
+    Player('jim', 'blue', 0),
+    Player('gary', 'green', 1),
+    Player('zach', 'red', 2),
+    Player('robert', 'orange', 3)
+]
+catan = Game(players=players)
 catan.start_game()
 catan.build_settlement(0x67)
 catan.build_road(0x67)
