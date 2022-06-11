@@ -164,12 +164,22 @@ class PlayerLabelFrame(tk.Frame):
 
         self._players = [tk.StringVar() for _ in self.game.players]
         self._cur_player = self.game.current_player
+
+        self._resource_count_var = tk.StringVar()
+        self.resources_label = tk.Label(self, textvariable=self._resource_count_var)
+        self.resources_label.pack(anchor='w')
         
         self.player_labels = [tk.Label(self, textvariable=player) for player in self._players]
         for pl in self.player_labels:
             pl.pack(anchor='w')
         
+        self.set_resources_label()
         self.set_player_labels()
+
+    def set_resources_label(self):
+        resource_counts = self.game.resource_card_counts
+        s = [f'{card.value}:{count}' for card, count in resource_counts.items()]
+        self._resource_count_var.set(' - '.join(s))
 
     def set_player_labels(self):
         self._cur_player = self.game.current_player
@@ -210,6 +220,7 @@ class PlayerLabelFrame(tk.Frame):
             player_s.set(s)
 
     def notify(self, observable: object):
+        self.set_resources_label()
         self.set_player_labels()
 
 class DiceSidesFrame(tk.Frame):
