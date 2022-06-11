@@ -69,7 +69,7 @@ catan.end_game(log=True)
 
 ### UI
 ```
-python3 ./pytan/ui/gui.py
+python3 ./pytan/ui/tests/play_game.py
 ```
 
 Or write custom gui elements
