@@ -77,7 +77,7 @@ class Replay(object):
                 params.append(p_s)
         return params
 
-    def get_log(self, idx: int) -> tuple[str, list[None]]:
+    def get_action(self, idx: int) -> tuple[str, list[None]]:
         log = self._log_list[idx]
         log = log.replace('\n','')
         log = log.strip()
@@ -94,7 +94,7 @@ class Replay(object):
     def start(self):
         if not self.replay_started:
             while 1:
-                function, params = self.get_log(0)
+                function, params = self.get_action(0)
                 self._log_list.pop(0)
                 getattr(self._game, function)(*params)
                 if function == 'start_game':
@@ -110,7 +110,7 @@ class Replay(object):
                     self._game.redo()
                 else:
                     self._log_idx += 1
-                    function, params = self.get_log(self._log_idx)
+                    function, params = self.get_action(self._log_idx)
                     getattr(self._game, function)(*params)
             else:
                 print('Reached the end')
