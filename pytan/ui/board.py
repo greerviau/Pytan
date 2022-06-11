@@ -1,16 +1,16 @@
-import tkinter as tk
-import pytan.ui.tkutils as tkutils
-from pytan.ui.tkutils import tk_status
-import math
-import functools
 from pytan.core import hexmesh
 from pytan.core.hexmesh import Directions
 from pytan.core.game import Game
+from pytan.core.board import Board
 from pytan.core.piece import Piece, PieceTypes
 from pytan.ui.state import CatanUIState, UIStates
+import pytan.ui.tkutils as tkutils
+import tkinter as tk
+import math
+import functools
 
 class BoardFrame(tk.Frame):
-    def __init__(self, master: tk.Frame, game: Game, ui_state = None, interact=True):
+    def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState = None, interact: bool = True):
         tk.Frame.__init__(self, master)
         self.master = master
         self.game = game
@@ -28,7 +28,7 @@ class BoardFrame(tk.Frame):
 
         self._center_to_edge = math.cos(math.radians(30)) * self._tile_radius
 
-    def piece_click(self, piece_type, event):
+    def piece_click(self, piece_type: PieceTypes, event: tk.Event):
         if self._interact:
             tags = self._board_canvas.gettags(event.widget.find_closest(event.x, event.y))
             # avoid processing tile clicks
@@ -49,36 +49,36 @@ class BoardFrame(tk.Frame):
                     self.game.move_robber(self._coord_from_robber_tag(tag))
                 self.redraw()
 
-    def notify(self, observable):
+    def notify(self, observable: object):
         self.redraw()
 
-    def draw(self, board):
-        terrain_centers = self._draw_terrain(board)
+    def draw(self):
+        terrain_centers = self._draw_terrain()
         
-        self._draw_numbers(board, terrain_centers)
+        self._draw_numbers(terrain_centers)
         
         if self.ui_state != UIStates.SETUP:
-            self._draw_ports(board, terrain_centers)  
+            self._draw_ports(terrain_centers)  
         
-        self._draw_pieces(board, terrain_centers)
+        self._draw_pieces(terrain_centers)
         if self._interact:
             if self.ui_state.is_building_road():
-                self._draw_piece_shadows(PieceTypes.ROAD, board, terrain_centers)
+                self._draw_piece_shadows(PieceTypes.ROAD, terrain_centers)
             if self.ui_state.is_building_settlement():
-                self._draw_piece_shadows(PieceTypes.SETTLEMENT, board, terrain_centers)
+                self._draw_piece_shadows(PieceTypes.SETTLEMENT, terrain_centers)
             if self.ui_state.is_building_city():
-                self._draw_piece_shadows(PieceTypes.CITY, board, terrain_centers)
+                self._draw_piece_shadows(PieceTypes.CITY, terrain_centers)
             if self.ui_state.is_moving_robber():
-                self._draw_piece_shadows(PieceTypes.ROBBER, board, terrain_centers) 
+                self._draw_piece_shadows(PieceTypes.ROBBER, terrain_centers) 
 
     def redraw(self):
         self._board_canvas.delete(tk.ALL)
-        self.draw(self.game.board)
+        self.draw()
 
-    def _draw_terrain(self, board):
+    def _draw_terrain(self):
         centers = {}
         last = None
-        for tile_id in board.tiles:
+        for tile_id in self.game.board.tiles:
             if not last:
                 centers[tile_id] = self._board_center
                 last = tile_id
@@ -96,7 +96,7 @@ class BoardFrame(tk.Frame):
             last = tile_id
 
         for tile_id, (x, y) in centers.items():
-            tile = board.tiles[tile_id]
+            tile = self.game.board.tiles[tile_id]
             self._draw_tile(x, y, tile.tile_type, tile)
 
         return dict(centers)
@@ -108,9 +108,9 @@ class BoardFrame(tk.Frame):
         points = self._hex_points(radius, offset, rotate)
         self._board_canvas.create_polygon(*points, fill=fill, outline='black', tags=tags)
 
-    def _draw_numbers(self, board, terrain_centers):
+    def _draw_numbers(self, terrain_centers):
         for tile_id, (x, y) in terrain_centers.items():
-            tile = board.tiles[tile_id]
+            tile = self.game.board.tiles[tile_id]
             if tile.prob != 7:
                 self._draw_number(x, y, tile.prob, tile)
 
@@ -126,9 +126,9 @@ class BoardFrame(tk.Frame):
             self._board_canvas.create_oval(tkutils.circle_bbox(2, (p_x, p_y)), fill='black', tags=self._tile_tag(tile))
             p_x += 5
 
-    def _draw_ports(self, board, terrain_centers, ports=None, ghost=False):
+    def _draw_ports(self, terrain_centers, ports=None, ghost=False):
         if ports is None:
-            ports = board.ports
+            ports = self.game.board.ports
         port_centers = []
         for port in ports.values():
             tile_x, tile_y = terrain_centers[port.tile]
@@ -153,8 +153,8 @@ class BoardFrame(tk.Frame):
         self._board_canvas.create_text(x, y, text=port.port_type.value, fill='black', font=self._hex_font)
         #self._board_canvas.tag_bind(self._port_tag(port), '<ButtonPress-1>', functools.partial(self.port_click, port))
 
-    def _draw_pieces(self, board, terrain_centers):
-        roads, settlements, cities, robber = self._get_pieces(board)
+    def _draw_pieces(self, terrain_centers):
+        roads, settlements, cities, robber = self._get_pieces()
 
         for road in roads:
             self._draw_piece(road.coord, road, terrain_centers)
@@ -167,7 +167,7 @@ class BoardFrame(tk.Frame):
 
         self._draw_piece(robber.coord, robber, terrain_centers)
 
-    def _draw_piece_shadows(self, piece_type, board, terrain_centers):
+    def _draw_piece_shadows(self, piece_type, terrain_centers):
         cp = self.game.current_player
         piece = Piece(0x00, cp.id, cp.name, cp.color, piece_type)
         if piece_type == PieceTypes.ROAD:
@@ -295,7 +295,7 @@ class BoardFrame(tk.Frame):
         radius = 10
         self._board_canvas.create_oval(x-radius, y-radius, x+radius, y+radius, **opts)
 
-    def _get_pieces(self, board):
+    def _get_pieces(self):
         roads = self.game.board.roads.values()
         settlements = self.game.board.settlements.values()
         cities = self.game.board.cities.values()

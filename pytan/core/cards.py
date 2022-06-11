@@ -30,7 +30,7 @@ DEV_CARD_COUNTS = {
     DevCards.YEAR_PLENTY: 2
 }
 
-ROAD = [(ResourceCards.WOOD, 1), (ResourceCards.BRICK, 1)]
-SETTLEMENT = [(ResourceCards.WHEAT, 1), (ResourceCards.SHEEP, 1), (ResourceCards.WOOD, 1), (ResourceCards.BRICK, 1)]
-CITY = [(ResourceCards.WHEAT, 2), (ResourceCards.ORE, 3)]
-DEV_CARD = [(ResourceCards.WHEAT, 1), (ResourceCards.ORE, 1), (ResourceCards.SHEEP, 1)]
+ROAD_COST = [(ResourceCards.WOOD, 1), (ResourceCards.BRICK, 1)]
+SETTLEMENT_COST = [(ResourceCards.WHEAT, 1), (ResourceCards.SHEEP, 1), (ResourceCards.WOOD, 1), (ResourceCards.BRICK, 1)]
+CITY_COST = [(ResourceCards.WHEAT, 2), (ResourceCards.ORE, 3)]
+DEV_CARD_COST = [(ResourceCards.WHEAT, 1), (ResourceCards.ORE, 1), (ResourceCards.SHEEP, 1)]

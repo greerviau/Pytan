@@ -31,7 +31,7 @@ LOG_CODES = {
 }
 
 class Logger(object):
-    def __init__(self, log_path='./game_logs/', console_log=False, raw_log=True):
+    def __init__(self, log_path: str = './game_logs/', console_log: bool = False, raw_log: bool = True):
         self.console_log = console_log
         self.raw_log = raw_log
 
@@ -48,12 +48,12 @@ class Logger(object):
     def start(self):
         return self._start
 
-    def log(self, text, end='\n'):
+    def log(self, text: str, end: str = '\n'):
         self._all_logs.append(text)
         if self.console_log:
             print(text, end=end)
 
-    def log_action(self, function: str, *params:tuple):
+    def log_action(self, function: str, *params: tuple):
         if self.raw_log and function in LOG_CODES.keys():
             str_params = []
             for param in params:
@@ -94,7 +94,7 @@ class Logger(object):
     def raw_dump(self):
         return '\n'.join(self._raw_logs)
 
-    def save_raw_log_file(self, filename = ''):
+    def save_raw_log_file(self, filename: str = ''):
         if not filename:
             filename = f'{self._start}.catan'
             filename = filename.replace(' ', '-')
@@ -109,7 +109,7 @@ class Logger(object):
         log_file.close()
         log_file = None
         
-    def save_log_file(self, filename = ''):
+    def save_log_file(self, filename: str = ''):
         if not filename:
             filename = f'{self._start}.log'
             filename = filename.replace(' ', '-')
@@ -143,7 +143,7 @@ class Logger(object):
         self._start = state['start']
 
     @staticmethod
-    def create_from_state(state: dict):
+    def create_from_state(state: dict) -> 'Logger':
         logger = Logger()
         logger.restore(state)
         return logger

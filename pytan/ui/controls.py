@@ -4,11 +4,12 @@ from pytan.ui.tkutils import tk_status
 from pytan.core.game import Game
 from pytan.core.cards import ResourceCards, DevCards
 from pytan.core.state import GameStates
-from pytan.core.trading import PortTypes
+from pytan.core.ports import PortTypes
 from pytan.ui.state import CatanUIState, UIStates
+from pytan.log.replay import Replay
 
 class ReplayControl(tk.Frame):
-    def __init__(self, master: tk.Frame, replay):
+    def __init__(self, master: tk.Frame, replay: Replay):
         tk.Frame.__init__(self, master)
         self.master = master
         self.replay = replay
@@ -74,7 +75,7 @@ class GameControlsFrame(tk.Frame):
         build_frame = BuildFrame(self, game, ui_state)
         dev_card_frame = DevCardFrame(self, game, ui_state)
         self.trade_button = tk.Button(self, command=self.on_trade, width=20, text='Trade')
-        self.save_button = tk.Button(self, command=self.game.logger.save_raw_log_file, width=20, text='Save Log')
+        self.save_button = tk.Button(self, command=self.on_save, width=20, text='Save Log')
 
         self.discard_frame = DiscardFrame(self, self.game, ui_state)
         self.steal_frame = StealFrame(self, self.game, ui_state)
@@ -89,17 +90,17 @@ class GameControlsFrame(tk.Frame):
         self.trade_button.pack()
         self.save_button.pack()
 
-    def notify(self, observable):
-        if self.game.state == GameStates.DISCARDING:
+    def notify(self, observable: object):
+        if self.game.state == GameStates.DISCARDING and not self.game.state.is_bot_turn():
             self.discard_frame = DiscardFrame(self, self.game, self.ui_state)
             self.discard_frame.pack(pady=5)
-        elif self.game.state == GameStates.STEALING:
+        elif self.game.state == GameStates.STEALING and not self.game.state.is_bot_turn():
             self.steal_frame = StealFrame(self, self.game, self.ui_state)
             self.steal_frame.pack(pady=5)
-        elif self.game.state == GameStates.ACCEPTING_TRADE:
+        elif self.game.state == GameStates.ACCEPTING_TRADE and not self.game.state.is_bot_turn():
             self.accept_trade_frame = AcceptTradeFrame(self, self.game, self.ui_state)
             self.accept_trade_frame.pack(pady=5)
-        elif self.game.state == GameStates.CONFIRMING_TRADE:
+        elif self.game.state == GameStates.CONFIRMING_TRADE and not self.game.state.is_bot_turn():
             self.confirm_trade_frame = ConfirmTradeFrame(self, self.game, self.ui_state)
             self.confirm_trade_frame.pack(pady=5)
         else:
@@ -112,6 +113,9 @@ class GameControlsFrame(tk.Frame):
 
     def set_states(self):
         self.trade_button.configure(state=tk_status[self.ui_state.can_trade()])
+
+    def on_save(self):
+        self.game.logger.save_raw_log_file()
 
     def on_trade(self):
         self.ui_state.set_state(UIStates.CREATING_TRADE)
@@ -144,7 +148,7 @@ class LogFrame(tk.Frame):
         self.text.see(tk.END)
         self.text.pack(expand=tk.YES, fill=tk.BOTH, anchor=tk.S)
 
-    def notify(self, observable):
+    def notify(self, observable: object):
         self.text.delete(1.0, tk.END)
         self.text.insert(tk.END, self.game.logger.log_dump())
         self.text.see(tk.END)
@@ -205,7 +209,7 @@ class PlayerLabelFrame(tk.Frame):
                     s += f'{abrv}'
             player_s.set(s)
 
-    def notify(self, observable):
+    def notify(self, observable: object):
         self.set_player_labels()
 
 class DiceSidesFrame(tk.Frame):
@@ -241,7 +245,7 @@ class DiceSidesFrame(tk.Frame):
         self.roll_eleven_button.grid(row=1,column=3)
         self.roll_twelve_button.grid(row=1,column=4)
 
-    def notify(self, observable):
+    def notify(self, observable: object):
         self.set_states()
 
     def set_states(self):
@@ -257,7 +261,7 @@ class DiceSidesFrame(tk.Frame):
         self.roll_eleven_button.configure(state=tk_status[self.ui_state.can_roll()])
         self.roll_twelve_button.configure(state=tk_status[self.ui_state.can_roll()])
 
-    def on_roll(self, roll):
+    def on_roll(self, roll: int):
         self.game.roll(roll)
         self.set_states()
 
@@ -278,7 +282,7 @@ class ActionFrame(tk.Frame):
         self.pass_turn_button.grid(row=0, column=1)
         self.cancel_button.grid(row=0, column=2)
 
-    def notify(self, observable):
+    def notify(self, observable: object):
         self.set_states()
     
     def set_states(self):
@@ -319,7 +323,7 @@ class BuildFrame(tk.LabelFrame):
         self.upgrade_city_button.grid(row=1, column=0)
         self.buy_dev_card_button.grid(row=1, column=1)
 
-    def notify(self, observable):
+    def notify(self, observable: object):
         self.set_states()
 
     def set_states(self):
@@ -373,7 +377,7 @@ class DevCardFrame(tk.Frame):
 
         self.plenty_frame = YearPlentyFrame(self, game, ui_state)
 
-    def notify(self, observable):
+    def notify(self, observable: object):
         self.set_states()
 
     def set_states(self):
@@ -524,45 +528,33 @@ class YearPlentyFrame(tk.LabelFrame):
         self.choice_frame = tk.Frame(self)
         self.choice_frame.pack()
 
-        self.choice_1_wheat_bool = tk.BooleanVar()
-        self.choice_1_wood_bool = tk.BooleanVar()
-        self.choice_1_sheep_bool = tk.BooleanVar()
-        self.choice_1_brick_bool = tk.BooleanVar()
-        self.choice_1_ore_bool = tk.BooleanVar()
-
-        self.choice_1_label = tk.Label(self, text='Card 1')
-        self.choice_1_label.pack(pady=5)
-        self.choice_1_wheat_button = tk.Checkbutton(self.choice_frame, variable=self.choice_1_wheat_bool, command=lambda:self.on_wheat(1), text='Wheat')
-        self.choice_1_wood_button = tk.Checkbutton(self.choice_frame, variable=self.choice_1_wood_bool, command=lambda:self.on_wood(1), text='Wood')
-        self.choice_1_sheep_button = tk.Checkbutton(self.choice_frame, variable=self.choice_1_sheep_bool, command=lambda:self.on_sheep(1), text='Sheep')
-        self.choice_1_brick_button = tk.Checkbutton(self.choice_frame, variable=self.choice_1_brick_bool, command=lambda:self.on_brick(1), text='Brick')
-        self.choice_1_ore_button = tk.Checkbutton(self.choice_frame, variable=self.choice_1_ore_bool, command=lambda:self.on_ore(1), text='Ore')
+        self.choice_1_label = tk.Label(self.choice_frame, text='Card 1')
+        self.choice_1_wheat_button = tk.Checkbutton(self.choice_frame, command=lambda:self.on_wheat(1), text='Wheat')
+        self.choice_1_wood_button = tk.Checkbutton(self.choice_frame, command=lambda:self.on_wood(1), text='Wood')
+        self.choice_1_sheep_button = tk.Checkbutton(self.choice_frame, command=lambda:self.on_sheep(1), text='Sheep')
+        self.choice_1_brick_button = tk.Checkbutton(self.choice_frame, command=lambda:self.on_brick(1), text='Brick')
+        self.choice_1_ore_button = tk.Checkbutton(self.choice_frame, command=lambda:self.on_ore(1), text='Ore')
         
-        self.choice_1_wheat_button.grid(row=0, column=0)
-        self.choice_1_wood_button.grid(row=0, column=1)
-        self.choice_1_sheep_button.grid(row=0, column=2)
-        self.choice_1_brick_button.grid(row=0, column=3)
-        self.choice_1_ore_button.grid(row=0, column=4)
+        self.choice_1_label.grid(row=0, column=0)
+        self.choice_1_wheat_button.grid(row=0, column=1)
+        self.choice_1_wood_button.grid(row=0, column=2)
+        self.choice_1_sheep_button.grid(row=0, column=3)
+        self.choice_1_brick_button.grid(row=0, column=4)
+        self.choice_1_ore_button.grid(row=0, column=5)
 
-        self.choice_2_wheat_bool = tk.BooleanVar()
-        self.choice_2_wood_bool = tk.BooleanVar()
-        self.choice_2_sheep_bool = tk.BooleanVar()
-        self.choice_2_brick_bool = tk.BooleanVar()
-        self.choice_2_ore_bool = tk.BooleanVar()
-
-        self.choice_2_label = tk.Label(self, text='Card 2')
-        self.choice_2_label.pack(pady=5)
-        self.choice_2_wheat_button = tk.Checkbutton(self.choice_frame, variable=self.choice_2_wheat_bool, command=lambda:self.on_wheat(2), text='Wheat')
-        self.choice_2_wood_button = tk.Checkbutton(self.choice_frame, variable=self.choice_2_wood_bool, command=lambda:self.on_wood(2), text='Wood')
-        self.choice_2_sheep_button = tk.Checkbutton(self.choice_frame, variable=self.choice_2_sheep_bool, command=lambda:self.on_sheep(2), text='Sheep')
-        self.choice_2_brick_button = tk.Checkbutton(self.choice_frame, variable=self.choice_2_brick_bool, command=lambda:self.on_brick(2), text='Brick')
-        self.choice_2_ore_button = tk.Checkbutton(self.choice_frame, variable=self.choice_2_ore_bool, command=lambda:self.on_ore(2), text='Ore')
+        self.choice_2_label = tk.Label(self.choice_frame, text='Card 2')
+        self.choice_2_wheat_button = tk.Checkbutton(self.choice_frame, command=lambda:self.on_wheat(2), text='Wheat')
+        self.choice_2_wood_button = tk.Checkbutton(self.choice_frame, command=lambda:self.on_wood(2), text='Wood')
+        self.choice_2_sheep_button = tk.Checkbutton(self.choice_frame, command=lambda:self.on_sheep(2), text='Sheep')
+        self.choice_2_brick_button = tk.Checkbutton(self.choice_frame, command=lambda:self.on_brick(2), text='Brick')
+        self.choice_2_ore_button = tk.Checkbutton(self.choice_frame, command=lambda:self.on_ore(2), text='Ore')
         
-        self.choice_2_wheat_button.grid(row=1, column=0)
+        self.choice_2_label.grid(row=1, column=0)
+        self.choice_2_wheat_button.grid(row=1, column=1)
         self.choice_2_wood_button.grid(row=1, column=2)
-        self.choice_2_sheep_button.grid(row=1, column=2)
-        self.choice_2_brick_button.grid(row=1, column=3)
-        self.choice_2_ore_button.grid(row=1, column=4)
+        self.choice_2_sheep_button.grid(row=1, column=3)
+        self.choice_2_brick_button.grid(row=1, column=4)
+        self.choice_2_ore_button.grid(row=1, column=5)
         
         self.confirm_button = tk.Button(self, command=self.on_confirm, text='Confirm')
         self.confirm_button.pack(pady=5)
@@ -605,60 +597,41 @@ class YearPlentyFrame(tk.LabelFrame):
             self.choice_2_ore_button.configure(state='normal')
     
     def on_wheat(self, card_n: int):
-        if card_n == 1 and self.choice_1_wheat_bool.get():
+        if card_n == 1:
             self._resource_1 = ResourceCards.WHEAT
-        elif card_n == 2 and self.choice_2_wheat_bool.get():
-            self._resource_2 = ResourceCards.WHEAT
-        elif card_n == 1:
-            self._resource_1 = None
         elif card_n == 2:
-            self._resource_2 = None
+            self._resource_2 = ResourceCards.WHEAT
                 
         self.set_states()
 
     def on_wood(self, card_n: int):
-        if card_n == 1 and self.choice_1_wood_bool.get():
+        if card_n == 1:
             self._resource_1 = ResourceCards.WOOD
-        elif card_n == 2 and self.choice_2_wood_bool.get():
-            self._resource_2 = ResourceCards.WOOD
-        elif card_n == 1:
-            self._resource_1 = None
         elif card_n == 2:
-            self._resource_2 = None
+            self._resource_2 = ResourceCards.WOOD
 
     def on_sheep(self, card_n: int):
-        if card_n == 1 and self.choice_1_sheep_bool.get():
+        if card_n == 1:
             self._resource_1 = ResourceCards.SHEEP
-        elif card_n == 2 and self.choice_2_sheep_bool.get():
-            self._resource_2 = ResourceCards.SHEEP
-        elif card_n == 1:
-            self._resource_1 = None
         elif card_n == 2:
-            self._resource_2 = None
+            self._resource_2 = ResourceCards.SHEEP
 
     def on_brick(self, card_n: int):
-        if card_n == 1 and self.choice_1_brick_bool.get():
+        if card_n == 1:
             self._resource_1 = ResourceCards.BRICK
-        elif card_n == 2 and self.choice_2_brick_bool.get():
-            self._resource_2 = ResourceCards.BRICK
-        elif card_n == 1:
-            self._resource_1 = None
         elif card_n == 2:
-            self._resource_2 = None
+            self._resource_2 = ResourceCards.BRICK
 
     def on_ore(self, card_n: int):
-        if card_n == 1 and self.choice_1_ore_bool.get():
+        if card_n == 1:
             self._resource_1 = ResourceCards.ORE
-        elif card_n == 2 and self.choice_2_ore_bool.get():
-            self._resource_2 = ResourceCards.ORE
-        elif card_n == 1:
-            self._resource_1 = None
         elif card_n == 2:
-            self._resource_2 = None
+            self._resource_2 = ResourceCards.ORE
 
-    def on_confirm(self, card_n: int):
-        self.master.clear_year_plenty()
-        self.game.play_year_plenty(self._resource_1, self._resource_2)
+    def on_confirm(self):
+        if self.resource_1 and self._resource_2:
+            self.master.clear_year_plenty()
+            self.game.play_year_plenty(self._resource_1, self._resource_2)
 
 class DiscardFrame(tk.LabelFrame):
     def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):

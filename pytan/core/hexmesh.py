@@ -119,7 +119,7 @@ def edge_in_direction(tile_coord: int, direction: Directions) -> int:
     return tile_coord + TE_DIRS[direction.value]
     
 class HexMesh(object):
-    def __init__(self, n_layers=0):
+    def __init__(self, n_layers: int = 0):
         #Init
         self._n_layers = n_layers
         self._init_tiles()

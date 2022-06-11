@@ -5,7 +5,7 @@ from pytan.core.player import Player
 import os
 
 class Replay(object):
-    def __init__(self, log_file: str, console_log = False):
+    def __init__(self, log_file: str, console_log: bool = False):
         assert os.path.exists(log_file)
         assert log_file.split('.')[-1] == 'catan'
 

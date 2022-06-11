@@ -1,10 +1,10 @@
-from pytan.core.cards import ResourceCards, DevCards, ROAD, SETTLEMENT, CITY, DEV_CARD
+from pytan.core.cards import ResourceCards, DevCards, ROAD_COST, SETTLEMENT_COST, CITY_COST, DEV_CARD_COST
 from pytan.core.tiles import CatanTile, TileTypes
 from collections import defaultdict
 import copy
 
 class Player(object):
-    def __init__(self, name: str, id: int, color: str, agent=''):
+    def __init__(self, name: str, id: int, color: str, agent: str = None):
         # Init
         self._name = name
         self._id = id
@@ -229,11 +229,11 @@ class Player(object):
         return count
 
     def can_buy_dev_card(self) -> bool:
-        return self.are_multiple_cards_in_hand(DEV_CARD)
+        return self.are_multiple_cards_in_hand(DEV_CARD_COST)
 
     def buy_dev_card(self, dev_card: DevCards, turn_bought: int):
         if self.can_buy_dev_card():
-            self.remove_resource_cards(DEV_CARD)
+            self.remove_resource_cards(DEV_CARD_COST)
             self._dev_cards.append((dev_card, turn_bought))
             if dev_card == DevCards.VICTORY_POINT:
                 self._vps += 1
@@ -247,21 +247,21 @@ class Player(object):
             self._knights_played += 1
 
     def can_buy_road(self) -> bool:
-        return self.are_multiple_cards_in_hand(ROAD)
+        return self.are_multiple_cards_in_hand(ROAD_COST)
 
     def add_road(self, coord: int):
         self._last_road_built = coord
         self._roads += 1
 
     def can_buy_settlement(self) -> bool:
-        return self.are_multiple_cards_in_hand(SETTLEMENT)
+        return self.are_multiple_cards_in_hand(SETTLEMENT_COST)
 
     def add_settlement(self, coord: int):
         self._last_settlement_built = coord
         self._settlements += 1
 
     def can_buy_city(self) -> bool:
-        return self.are_multiple_cards_in_hand(CITY)
+        return self.are_multiple_cards_in_hand(CITY_COST)
 
     def add_city(self, coord: int):
         self._last_city_built = coord

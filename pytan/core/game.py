@@ -3,7 +3,7 @@ from pytan.core.tiles import TILE_TYPES_TO_RESOURCE
 from pytan.core.player import Player
 from pytan.core.cards import *
 from pytan.core.state import GameStates, CatanGameState
-from pytan.core.trading import PortTypes
+from pytan.core.ports import PortTypes
 from pytan.core.tiles import CatanTile
 from pytan.log.logging import Logger
 from collections import defaultdict
@@ -14,7 +14,7 @@ import sys
 
 class Game(object):
 
-    def __init__(self, players = [], board = None, logger = Logger(console_log=True), seed=random.random()):
+    def __init__(self, players: list[Player] = [], logger: Logger = Logger(console_log=True), seed: float = random.random()):
         # Init
         self._logger = logger
 
@@ -32,8 +32,6 @@ class Game(object):
         self._observers = set()
 
         self._board = Board(seed=seed)
-        if board:
-            self._board = board
 
         self.clear_players()
         if players:
@@ -48,87 +46,7 @@ class Game(object):
         self.set_starting_player(self._prng.randint(0,len(self._players)-1))
 
         self.shuffle_dev_cards()
-
-    def init_game_vars(self):
-        # Init game variables
-        self._resource_card_counts = RESOURCE_CARD_COUNTS.copy()
-
-        self._discarding_players = []
-        self._players_to_steal_from = []
-        self._players_accepting_trade = []
-        self._players_accepted_trade = []
-
-        self._give_trade = []
-        self._want_trade = []
-        
-        self._current_roll = 0
-        self._last_roll = 0
-        self._has_rolled = False
-
-        self._knight_played_this_turn = False
-
-        self._free_roads = 0
-
-        self._longest_road = -1
-        self._largest_army = -1
-
-        self._moves_made = 0
-        self._turn = 0
-        
-    def reset(self, randomize=False):
-        # Reset the game state
-        self.init_game_vars()
-        self._observers = self._observers.copy()
-        self._players = [p.clone_player() for p in self._players]
-        self._current_player_idx = self._starting_player_idx
-
-        self._stored_states = []
-        self._state_idx = -1
-
-        if randomize:
-            self.set_seed(random.random(), log=False)
-        else:
-            self.set_seed(self._seed, log=False)
-
-        self._board.set_seed(self._seed)
-        self._board.setup_tiles()
-        self._board.setup_ports()
-
-        self.shuffle_dev_cards()
-
-        self._game_state.set_state(GameStates.UNDEFINED)
-        self._board.reset()
-
-    def set_seed(self, seed: float, log=True):
-        if log:
-            self._logger.log_action('set_seed', seed)
-        self._seed = seed
-        self._prng.seed(self._seed)
-
-    def clear_observers(self):
-        self._observers = set()
-
-    def add_observer(self, observable: object):
-        self._observers.add(observable)
-
-    def notify(self, new=True, update=True):
-        if new:
-            if self._state_idx < len(self._stored_states)-1:
-                self._stored_states[self._state_idx+1] = self.get_state()
-            else:
-                self._stored_states.append(self.get_state())
-            self._state_idx += 1
-        for player in self._players:
-            if player.total_victory_points >= 10:
-                self._logger.log(f'GAME OVER {self.current_turn_player} wins!')
-                self._game_state.set_state(GameStates.GAME_OVER)
-        if update:
-            for obs in self._observers:
-                try:
-                    obs.notify(self)
-                except:
-                    pass
-
+    
     @property
     def logger(self) -> Logger:
         return self._logger
@@ -172,6 +90,10 @@ class Game(object):
     @property
     def n_dev_cards(self) -> int:
         return len(self._dev_cards)
+
+    @property
+    def current_player_idx(self) -> int:
+        return self._current_player_idx
 
     @property
     def current_turn_player(self) -> Player:
@@ -263,6 +185,84 @@ class Game(object):
     def state(self, s: GameStates):
         self._game_state.set_state(s)
 
+    def init_game_vars(self):
+        # Init game variables
+        self._resource_card_counts = RESOURCE_CARD_COUNTS.copy()
+
+        self._discarding_players = []
+        self._players_to_steal_from = []
+        self._players_accepting_trade = []
+        self._players_accepted_trade = []
+
+        self._give_trade = []
+        self._want_trade = []
+        
+        self._current_roll = 0
+        self._last_roll = 0
+        self._has_rolled = False
+
+        self._knight_played_this_turn = False
+
+        self._free_roads = 0
+
+        self._longest_road = -1
+        self._largest_army = -1
+
+        self._moves_made = 0
+        self._turn = 0
+        
+    def reset(self, randomize: bool = False):
+        # Reset the game state
+        self.init_game_vars()
+        self._observers = self._observers.copy()
+        self._players = [p.clone_player() for p in self._players]
+        self._current_player_idx = self._starting_player_idx
+
+        self._stored_states = []
+        self._state_idx = -1
+
+        if randomize:
+            self.set_seed(random.random(), log=False)
+        else:
+            self.set_seed(self._seed, log=False)
+
+        self._board.set_seed(self._seed)
+        self._board.reset()
+
+        self.shuffle_dev_cards()
+
+        self._game_state.set_state(GameStates.UNDEFINED)
+
+    def set_seed(self, seed: float, log: bool = True):
+        if log:
+            self._logger.log_action('set_seed', seed)
+        self._seed = seed
+        self._prng.seed(self._seed)
+
+    def clear_observers(self):
+        self._observers = set()
+
+    def add_observer(self, observable: object):
+        self._observers.add(observable)
+
+    def notify(self, new:bool = True, update:bool = True):
+        if new:
+            if self._state_idx < len(self._stored_states)-1:
+                self._stored_states[self._state_idx+1] = self.get_state()
+            else:
+                self._stored_states.append(self.get_state())
+            self._state_idx += 1
+        for player in self._players:
+            if player.total_victory_points >= 10:
+                self._logger.log(f'GAME OVER {self.current_turn_player} wins!')
+                self._game_state.set_state(GameStates.GAME_OVER)
+        if update:
+            for obs in self._observers:
+                try:
+                    obs.notify(self)
+                except:
+                    pass
+
     def shuffle_dev_cards(self):
         self._dev_cards = []
         for card in DEV_CARD_COUNTS:
@@ -291,7 +291,7 @@ class Game(object):
             if player.id == player_id:
                 return player
     
-    def start_game(self, randomize=False):
+    def start_game(self, randomize: bool = False):
         self.reset(randomize)
 
         self._logger.log('=== CATAN ===\n')
@@ -304,7 +304,7 @@ class Game(object):
         self.state = GameStates.STARTING_SETTLEMENT
         self.notify()
 
-    def end_game(self, log=False):
+    def end_game(self, log: bool = False):
         self._logger.log('Ending Game')
         self._logger.log_action('end_game')
         if log:
@@ -319,7 +319,7 @@ class Game(object):
         for card, n in resource_list:
             self._resource_card_counts[card] += n
 
-    def _collect_resources(self, tiles: dict[int, CatanTile], node_coord=0x00):
+    def _collect_resources(self, tiles: dict[int, CatanTile], node_coord: int = 0x00):
         pickups = defaultdict(lambda: defaultdict(int))
         quantity = defaultdict(int)
         for tile_coord, tile in tiles.items():
@@ -346,10 +346,11 @@ class Game(object):
                 if quantity[card] < self._resource_card_counts[card]:
                     p_l.append(f'{count} {card.value}')
                     pickup_list.append((card,count))
-            s = ', '.join(p_l)
-            self._logger.log(f'{player} picked up {s}')
-            player.add_resource_cards(pickup_list)
-            self._remove_resources(pickup_list)
+            if pickup_list:
+                s = ', '.join(p_l)
+                self._logger.log(f'{player} picked up {s}')
+                player.add_resource_cards(pickup_list)
+                self._remove_resources(pickup_list)
 
     def discard(self, resource_list: list[tuple[ResourceCards, int]]):
         if self._game_state.can_discard(log=True):
@@ -369,6 +370,7 @@ class Game(object):
                 self._logger.log(f'{player} discarded {s}')
                 self._logger.log_action('discard', resource_list)
                 if len(self._discarding_players) == 0:
+                    self._logger.log(f'{self.current_player} is moving the robber')
                     self._game_state.set_state(GameStates.MOVING_ROBBER)
                 else:
                     p = self.discarding_player
@@ -378,7 +380,7 @@ class Game(object):
         else:
             self._logger.log('No players need to discard')
 
-    def roll(self, dice_roll=0):
+    def roll(self, dice_roll: int = 0):
         if self._game_state.can_roll(log=True):
             self._has_rolled = True
             # Roll a random dice roll
@@ -470,8 +472,8 @@ class Game(object):
         elif self._game_state.can_build_road(log=True):
             if self._build_road(coord):
                 if self._free_roads == 0:
-                    self.current_turn_player.remove_resource_cards(ROAD)
-                    self._add_resources(ROAD)
+                    self.current_turn_player.remove_resource_cards(ROAD_COST)
+                    self._add_resources(ROAD_COST)
                 else:
                     self._free_roads -= 1
                 if self._free_roads == 0:
@@ -510,11 +512,11 @@ class Game(object):
                 self.notify()
         elif self._game_state.can_build_settlement(log=True):
             if self._build_settlement(coord):
-                self.current_turn_player.remove_resource_cards(SETTLEMENT)
+                self.current_turn_player.remove_resource_cards(SETTLEMENT_COST)
+                self._add_resources(SETTLEMENT_COST)
                 tiles = self._board.node_neighboring_tiles(self.current_turn_player.last_settlement_built)
                 for t in tiles:
                     self.current_turn_player.add_tile(self._board.tiles[t])
-                self._add_resources(SETTLEMENT)
                 self._game_state.set_state(GameStates.INGAME)
                 self.notify()
 
@@ -538,12 +540,12 @@ class Game(object):
     def build_city(self, coord: int):
         if self._game_state.can_build_city(log=True):
             if self._build_city(coord):
-                self.current_turn_player.remove_resource_cards(CITY)
-                self._add_resources(CITY)
+                self.current_turn_player.remove_resource_cards(CITY_COST)
+                self._add_resources(CITY_COST)
                 self._game_state.set_state(GameStates.INGAME)               
                 self.notify()
 
-    def buy_dev_card(self, dev_card = None):
+    def buy_dev_card(self, dev_card:DevCards = None):
         if self._game_state.can_buy_dev_card(log=True):
             if not dev_card:
                 dev_card = self._dev_cards.pop(0)
@@ -552,7 +554,7 @@ class Game(object):
             self._logger.log_action('buy_dev_card', dev_card)         
             self.notify()
 
-    def move_robber(self, tile_coord: int):
+    def move_robber(self, tile_coord: int, auto_steal: bool = False):
         if self._game_state.is_moving_robber(log=True):
             if tile_coord != self.board.robber.coord:
                 self._board.move_robber(tile_coord)
@@ -562,7 +564,8 @@ class Game(object):
                 if len(player_ids) == 1:
                     self._game_state.set_state(GameStates.STEALING)
                     self._players_to_steal_from = player_ids
-                    self._steal(player_ids[0])
+                    if auto_steal:
+                        self._steal(player_ids[0])
                 elif player_ids:
                     self._game_state.set_state(GameStates.STEALING)
                     self._logger.log(f'{self.current_turn_player} is stealing')
@@ -603,34 +606,36 @@ class Game(object):
                     if len(giving) == 1 and len(wanting) == 1 and not players:
                         give_card, give_n = giving[0]
                         want_card, want_n = wanting[0]
-                        if give_n == 4 and want_n == 1:
-                            self.current_turn_player.remove_resource_cards(giving)
-                            self.current_turn_player.add_resource_card(want_card)
-                            self._add_resources(giving)
-                            self._remove_resources(wanting)
-                            self._logger.log(f'{self.current_turn_player} traded 4 {give_card.value} for a {want_card.value}')
-                            self._logger.log_action('offer_trade', giving, wanting, players)
-                            self.notify()
-                            return
-                        if self.board.is_player_on_port(self.current_turn_player.id, PortTypes(give_card.value)) and give_n == 2 and want_n == 1:
-                            self.current_turn_player.remove_resource_cards(giving)
-                            self.current_turn_player.add_resource_card(want_card)
-                            self._add_resources(giving)
-                            self._remove_resources(wanting)
-                            self._logger.log(f'{self.current_turn_player} traded 2 {give_card.value} for a {want_card.value}')
-                            self._logger.log_action('offer_trade', giving, wanting, players)
-                            self.notify()
-                            return
-                        elif self.board.is_player_on_port(self.current_turn_player.id, PortTypes.ANY) and give_n == 3 and want_n == 1:
-                            self.current_turn_player.remove_resource_cards(giving)
-                            self.current_turn_player.add_resource_card(want_card)
-                            self._add_resources(giving)
-                            self._remove_resources(wanting)
-                            self._logger.log(f'{self.current_turn_player} traded 3 {give_card.value} for a {want_card.value}')
-                            self._logger.log_action('offer_trade', giving, wanting, players)
-                            self.notify()
-                            return
-                    
+                        if self._resource_card_counts[want_card] >= 1:
+                            if give_n == 4 and want_n == 1:
+                                self.current_turn_player.remove_resource_cards(giving)
+                                self.current_turn_player.add_resource_card(want_card)
+                                self._add_resources(giving)
+                                self._remove_resources(wanting)
+                                self._logger.log(f'{self.current_turn_player} traded 4 {give_card.value} for a {want_card.value}')
+                                self._logger.log_action('offer_trade', giving, wanting, players)
+                                self.notify()
+                                return
+                            if self.board.is_player_on_port(self.current_turn_player.id, PortTypes(give_card.value)) and give_n == 2 and want_n == 1:
+                                self.current_turn_player.remove_resource_cards(giving)
+                                self.current_turn_player.add_resource_card(want_card)
+                                self._add_resources(giving)
+                                self._remove_resources(wanting)
+                                self._logger.log(f'{self.current_turn_player} traded 2 {give_card.value} for a {want_card.value}')
+                                self._logger.log_action('offer_trade', giving, wanting, players)
+                                self.notify()
+                                return
+                            elif self.board.is_player_on_port(self.current_turn_player.id, PortTypes.ANY) and give_n == 3 and want_n == 1:
+                                self.current_turn_player.remove_resource_cards(giving)
+                                self.current_turn_player.add_resource_card(want_card)
+                                self._add_resources(giving)
+                                self._remove_resources(wanting)
+                                self._logger.log(f'{self.current_turn_player} traded 3 {give_card.value} for a {want_card.value}')
+                                self._logger.log_action('offer_trade', giving, wanting, players)
+                                self.notify()
+                                return
+                        else:
+                            self._logger.log(f'The bank does not have any {want_card.value} left')
                     if players:
                         s = f'{self.current_turn_player} wants to trade '
                         for c, n in giving:
@@ -823,12 +828,12 @@ class Game(object):
         self._turn = state['turn']
 
     @staticmethod
-    def create_from_state(state: dict): 
+    def create_from_state(state: dict) -> 'Game':
         game = Game()
         game.restore(state)
         return game
     
-    def undo(self, update=True):
+    def undo(self, update:bool = True):
         if len(self._stored_states) > 0 and self._state_idx > 0:
             self._state_idx -= 1
             self.restore(self._stored_states[self._state_idx])
@@ -836,36 +841,10 @@ class Game(object):
         else:
             print('Cant undo')
     
-    def redo(self, update=True):
+    def redo(self, update: bool = True):
         if self._state_idx < len(self._stored_states)-1:
             self._state_idx += 1
             self.restore(self._stored_states[self._state_idx])
             self.notify(new=False, update=update)
         else:
             print('Cant redo')
-                
-if __name__ == '__main__':
-    game = Game()
-    print(game.players)
-    game.start_game()
-    print(len(game.legal_settlement_placements()))
-    game.build_settlement(0x67)
-    print(len(game.legal_settlement_placements()))
-    game.undo()
-    print(len(game.legal_settlement_placements()))
-    game.build_settlement(0x45)
-    print(len(game.legal_settlement_placements()))
-    game.undo()
-    print(len(game.legal_settlement_placements()))
-    game.build_settlement(0x89)
-    print(len(game.legal_settlement_placements()))
-    game.undo()
-    print(len(game.legal_settlement_placements()))
-    game.build_settlement(0x87)
-    print(len(game.legal_settlement_placements()))
-    game.undo()
-    print(len(game.legal_settlement_placements()))
-    game.build_settlement(0x98)
-    print(len(game.legal_settlement_placements()))
-    game.undo()
-    print(len(game.legal_settlement_placements()))

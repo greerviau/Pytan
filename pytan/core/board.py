@@ -1,21 +1,18 @@
 from pytan.core import hexmesh
 from pytan.core.hexmesh import Directions
-from pytan.core.piece import PieceTypes, Piece
+from pytan.core.piece import PieceTypes, Piece, place_piece
 from pytan.core.cards import ResourceCards
-from pytan.core.trading import PortTypes, Port, PORT_TYPE_COUNTS
+from pytan.core.ports import PortTypes, Port, PORT_TYPE_COUNTS
 from pytan.core.tiles import *
 from pytan.core.player import Player
 import random
 import copy
 
 class Board(hexmesh.HexMesh):
-    def __init__(self, seed=random.random()):
+    def __init__(self, seed: float = random.random()):
         super().__init__(n_layers = 2)
         self._prng = random.Random()
         self.set_seed(seed)
-        
-        self.setup_tiles()
-        self.setup_ports()
         self.reset()
         
     def reset(self):
@@ -25,6 +22,8 @@ class Board(hexmesh.HexMesh):
     def set_seed(self, seed: int):
         self._seed = seed
         self._prng.seed(self._seed)
+        self.setup_tiles()
+        self.setup_ports()
 
     def setup_tiles(self):
         self._robber = None
@@ -41,20 +40,20 @@ class Board(hexmesh.HexMesh):
                 available_probs.append(prob)
 
         for coord in self._tiles:
-            tile_choice = random.choice(available_tiles)
+            tile_choice = self._prng.choice(available_tiles)
             available_tiles.remove(tile_choice)
             tile_type = tile_choice
             
             prob = 7
             if tile_type != TileTypes.DESERT:
-                prob = random.choice(available_probs)
+                prob = self._prng.choice(available_probs)
                 available_probs.remove(prob)
             else:
-                self._robber = Piece(coord, -1, '', 'black', PieceTypes.ROBBER)
+                self._robber = place_piece(coord, -1, '', 'black', PieceTypes.ROBBER)
 
             self._tiles[coord] = CatanTile(coord, prob, tile_type, PROB_TO_PROD[prob])
 
-    def setup_ports(self, rotate=0):
+    def setup_ports(self, rotate: int = 0):
         self._ports = {}
         edge_tiles = list(self.edge_tiles.keys())
         for i in range(rotate):
@@ -79,7 +78,7 @@ class Board(hexmesh.HexMesh):
                         i = 0
                 edge = hexmesh.edge_in_direction(tile, port_dir)
                 node1, node2 = tuple(self.edge_neighboring_nodes(edge).keys())
-                port_type = random.choice(available_ports)
+                port_type = self._prng.choice(available_ports)
                 available_ports.remove(port_type)
                 self._ports[tile] = Port(node1, node2, tile, port_dir, port_type)
 
@@ -126,7 +125,7 @@ class Board(hexmesh.HexMesh):
         return [coord for coord, tile in self._tiles.items() if coord != self._robber.coord]
 
     def move_robber(self, coord: int):
-        self._robber = Piece(coord, -1, '', 'black', PieceTypes.ROBBER)
+        self._robber = place_piece(coord, -1, '', 'black', PieceTypes.ROBBER)
 
     def tiles_with_prob(self, prob: int) -> dict[int, CatanTile]:
         return {coord: tile for coord, tile in self._tiles.items() if type(tile) == CatanTile and tile.prob == prob}
@@ -241,14 +240,14 @@ class Board(hexmesh.HexMesh):
     def build_road(self, edge_coord: int, player: Player) -> bool:
         edge = self._edges[edge_coord]
         if not edge:
-            self._edges[edge_coord] = Piece(edge_coord, player.id, player.name, player.color, PieceTypes.ROAD)
+            self._edges[edge_coord] = place_piece(edge_coord, player.id, player.name, player.color, PieceTypes.ROAD)
             return True
         return False
         
     def build_settlement(self, node_coord: int, player: Player) -> bool:
         node = self._nodes[node_coord]
         if not node:
-            self._nodes[node_coord] = Piece(node_coord, player.id, player.name, player.color, PieceTypes.SETTLEMENT)
+            self._nodes[node_coord] = place_piece(node_coord, player.id, player.name, player.color, PieceTypes.SETTLEMENT)
             return True
         return False
     
@@ -256,7 +255,7 @@ class Board(hexmesh.HexMesh):
         node = self._nodes[node_coord]
         if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT:
             if node.owner_id == player.id:
-                self._nodes[node_coord] = Piece(node_coord, player.id, player.name, player.color, PieceTypes.CITY)
+                self._nodes[node_coord] = place_piece(node_coord, player.id, player.name, player.color, PieceTypes.CITY)
                 return True
         return False
 
@@ -275,7 +274,7 @@ class Board(hexmesh.HexMesh):
             roads = [r for r in roads if r not in explored]
         return longest_chain
 
-    def _explore_road(self, road_coord: int, player_id: int, explored: set, chain_length: list[int], parent_neighbors=[]) -> int:
+    def _explore_road(self, road_coord: int, player_id: int, explored: set, chain_length: list[int], parent_neighbors=[]):
         explored.add(road_coord)
         neighbors = self._neighboring_friendly_roads(road_coord, player_id)
         if chain_length[0] == 1:
@@ -314,7 +313,7 @@ class Board(hexmesh.HexMesh):
         self._seed = state['seed']
 
     @staticmethod
-    def create_from_state(state: dict):
+    def create_from_state(state: dict) -> 'Board':
         board = Board()
         board.restore(state)
         return board
@@ -367,23 +366,3 @@ class Board(hexmesh.HexMesh):
                 s += f'{city}\n'
         
         return s
-
-if __name__ == '__main__':
-    board = Board()
-    print(board)
-    print('Buy Settlement 0x76')
-    board.build_settlement(0x76, 1)
-
-    print('Buy Road 0x66')
-    board.build_road(0x66, 1)
-
-    print('Buy Road 0x67')
-    board.build_road(0x67, 1)
-
-    print('Buy Road 0x68')
-    board.build_road(0x68, 1)
-
-    print('Buy Settlement 0x69')
-    board.build_settlement(0x69, 1)
-
-    print(board)
