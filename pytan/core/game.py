@@ -42,6 +42,8 @@ class Game(object):
             self.add_player(Player('P2', 1, 'blue'))
             self.add_player(Player('P3', 2, 'white'))
             self.add_player(Player('P4', 3, 'orange'))
+        player_ids = set([p.id for p in self._players])
+        assert len(player_ids) == len(self._players)
         
         self.set_starting_player(self._prng.randint(0,len(self._players)-1))
 
