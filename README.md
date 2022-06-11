@@ -40,6 +40,12 @@ catan.accept_trade()
 catan.accept_trade()
 # player (2) turn, trade with player (1) or player (3)?
 catan.confirm_trade(1)
+# player (2) traded 1 WHEAT to player(1) for 1 WOOD
+
+# Trade with the Bank
+# offer amount can be adjusted if player is on a port
+catan.offer_trade([(RC.WHEAT, 4)], [(RC.WOOD, 1)], []) # leave player_ids empty
+# player (2) traded 3 WHEAT to the Bank for 1 WOOD
 ...
 # Dev Cards
 catan.buy_dev_card()
