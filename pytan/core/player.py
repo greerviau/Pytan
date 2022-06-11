@@ -181,23 +181,14 @@ class Player(object):
         return 0
 
     def add_resource_card(self, card: ResourceCards):
-        try:
-            self._resource_cards[card] += 1
-        except:
-            self._resource_cards[card] = 1
+        self._resource_cards[card] += 1
 
     def add_resource_cards(self, cards: list[tuple[ResourceCards, int]]):
         for card, n in cards:
-            try:
-                self._resource_cards[card] += n
-            except:
-                self._resource_cards[card] = n
+            self._resource_cards[card] += n
 
     def remove_resource_card(self, card: ResourceCards):
-        try:
-            self._resource_cards[card] -= 1
-        except:
-            pass
+        self._resource_cards[card] -= 1
 
     def remove_all_resource_card(self, card: ResourceCards) -> int:
         og_len = self.n_resource_cards
@@ -206,10 +197,7 @@ class Player(object):
 
     def remove_resource_cards(self, cards: list[tuple[ResourceCards, int]]):
         for card, n in cards:
-            try:
-                self._resource_cards[card] -= n
-            except:
-                pass
+            self._resource_cards[card] -= n
 
     def are_cards_in_hand(self, cards_needed: tuple[ResourceCards, int]) -> bool:
         card, n = cards_needed
@@ -231,9 +219,8 @@ class Player(object):
     def can_buy_dev_card(self) -> bool:
         return self.are_multiple_cards_in_hand(DEV_CARD_COST)
 
-    def buy_dev_card(self, dev_card: DevCards, turn_bought: int):
+    def add_dev_card(self, dev_card: DevCards, turn_bought: int):
         if self.can_buy_dev_card():
-            self.remove_resource_cards(DEV_CARD_COST)
             self._dev_cards.append((dev_card, turn_bought))
             if dev_card == DevCards.VICTORY_POINT:
                 self._vps += 1

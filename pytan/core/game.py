@@ -551,7 +551,9 @@ class Game(object):
         if self._game_state.can_buy_dev_card(log=True):
             if not dev_card:
                 dev_card = self._dev_cards.pop(0)
-            self.current_turn_player.buy_dev_card(dev_card, self._turn)
+            self.current_turn_player.add_dev_card(dev_card, self._turn)
+            self.current_turn_player.remove_resource_cards(DEV_CARD_COST)
+            self._add_resources(DEV_CARD_COST)
             self._logger.log(f'{self.current_turn_player} bought a {dev_card.value} Dev Card')
             self._logger.log_action('buy_dev_card', dev_card)         
             self.notify()
