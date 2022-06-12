@@ -1,12 +1,11 @@
-import tkinter as tk
-import pytan.ui.tkutils as tkutils
-from pytan.ui.tkutils import tk_status
 from pytan.core.game import Game
 from pytan.core.cards import ResourceCards, DevCards
 from pytan.core.state import GameStates
 from pytan.core.ports import PortTypes
 from pytan.ui.state import CatanUIState, UIStates
+import pytan.ui.tkutils as tkutils
 from pytan.log.replay import Replay
+import tkinter as tk
 
 class ReplayControl(tk.Frame):
     def __init__(self, master: tk.Frame, replay: Replay):
@@ -112,7 +111,7 @@ class GameControlsFrame(tk.Frame):
         self.set_states()
 
     def set_states(self):
-        self.trade_button.configure(state=tk_status[self.ui_state.can_trade()])
+        self.trade_button.configure(state=tkutils.tk_status[self.ui_state.can_trade()])
 
     def on_save(self):
         self.game.logger.save_raw_log_file()
@@ -260,17 +259,17 @@ class DiceSidesFrame(tk.Frame):
         self.set_states()
 
     def set_states(self):
-        self.roll_two_button.configure(state=tk_status[self.ui_state.can_roll()])
-        self.roll_three_button.configure(state=tk_status[self.ui_state.can_roll()])
-        self.roll_four_button.configure(state=tk_status[self.ui_state.can_roll()])
-        self.roll_five_button.configure(state=tk_status[self.ui_state.can_roll()])
-        self.roll_six_button.configure(state=tk_status[self.ui_state.can_roll()])
-        self.roll_seven_button.configure(state=tk_status[self.ui_state.can_roll()])
-        self.roll_eight_button.configure(state=tk_status[self.ui_state.can_roll()])
-        self.roll_nine_button.configure(state=tk_status[self.ui_state.can_roll()])
-        self.roll_ten_button.configure(state=tk_status[self.ui_state.can_roll()])
-        self.roll_eleven_button.configure(state=tk_status[self.ui_state.can_roll()])
-        self.roll_twelve_button.configure(state=tk_status[self.ui_state.can_roll()])
+        self.roll_two_button.configure(state=tkutils.tk_status[self.ui_state.can_roll()])
+        self.roll_three_button.configure(state=tkutils.tk_status[self.ui_state.can_roll()])
+        self.roll_four_button.configure(state=tkutils.tk_status[self.ui_state.can_roll()])
+        self.roll_five_button.configure(state=tkutils.tk_status[self.ui_state.can_roll()])
+        self.roll_six_button.configure(state=tkutils.tk_status[self.ui_state.can_roll()])
+        self.roll_seven_button.configure(state=tkutils.tk_status[self.ui_state.can_roll()])
+        self.roll_eight_button.configure(state=tkutils.tk_status[self.ui_state.can_roll()])
+        self.roll_nine_button.configure(state=tkutils.tk_status[self.ui_state.can_roll()])
+        self.roll_ten_button.configure(state=tkutils.tk_status[self.ui_state.can_roll()])
+        self.roll_eleven_button.configure(state=tkutils.tk_status[self.ui_state.can_roll()])
+        self.roll_twelve_button.configure(state=tkutils.tk_status[self.ui_state.can_roll()])
 
     def on_roll(self, roll: int):
         self.game.roll(roll)
@@ -297,9 +296,9 @@ class ActionFrame(tk.Frame):
         self.set_states()
     
     def set_states(self):
-        self.roll_button.configure(state=tk_status[self.ui_state.can_roll()])
-        self.pass_turn_button.configure(state=tk_status[self.ui_state.can_pass_turn()])
-        self.cancel_button.configure(state=tk_status[self.ui_state.can_cancel()])
+        self.roll_button.configure(state=tkutils.tk_status[self.ui_state.can_roll()])
+        self.pass_turn_button.configure(state=tkutils.tk_status[self.ui_state.can_pass_turn()])
+        self.cancel_button.configure(state=tkutils.tk_status[self.ui_state.can_cancel()])
     
     def on_dice_roll(self):
         self.game.roll()
@@ -338,10 +337,10 @@ class BuildFrame(tk.LabelFrame):
         self.set_states()
 
     def set_states(self):
-        self.build_road_button.configure(state=tk_status[self.ui_state.can_build_road()])
-        self.build_settlement_button.configure(state=tk_status[self.ui_state.can_build_settlement()])
-        self.upgrade_city_button.configure(state=tk_status[self.ui_state.can_build_city()])
-        self.buy_dev_card_button.configure(state=tk_status[self.ui_state.can_buy_dev_card()])
+        self.build_road_button.configure(state=tkutils.tk_status[self.ui_state.can_build_road()])
+        self.build_settlement_button.configure(state=tkutils.tk_status[self.ui_state.can_build_settlement()])
+        self.upgrade_city_button.configure(state=tkutils.tk_status[self.ui_state.can_build_city()])
+        self.buy_dev_card_button.configure(state=tkutils.tk_status[self.ui_state.can_buy_dev_card()])
 
     def on_build_road(self):
         self.ui_state.set_state(UIStates.BUILDING_ROAD)
@@ -392,10 +391,10 @@ class DevCardFrame(tk.Frame):
         self.set_states()
 
     def set_states(self):
-        self.knight_button.configure(state=tk_status[self.ui_state.can_play_knight()])
-        self.monopoly_button.configure(state=tk_status[self.ui_state.can_play_monopoly()])
-        self.road_builder_button.configure(state=tk_status[self.ui_state.can_play_road_builder()])
-        self.plenty_button.configure(state=tk_status[self.ui_state.can_play_year_plenty()])
+        self.knight_button.configure(state=tkutils.tk_status[self.ui_state.can_play_knight()])
+        self.monopoly_button.configure(state=tkutils.tk_status[self.ui_state.can_play_monopoly()])
+        self.road_builder_button.configure(state=tkutils.tk_status[self.ui_state.can_play_road_builder()])
+        self.plenty_button.configure(state=tkutils.tk_status[self.ui_state.can_play_year_plenty()])
 
     def on_knight(self):
         self.game.play_knight()

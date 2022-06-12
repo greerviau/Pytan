@@ -1,7 +1,6 @@
-
+from pytan.core.cards import ResourceCards
 from enum import Enum
 from collections import namedtuple
-from pytan.core.cards import ResourceCards
 
 class TileTypes(Enum):
     WHEAT = 'WHEAT'
