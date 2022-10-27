@@ -10,7 +10,7 @@ with open(readme_path, 'r') as fh:
 setuptools.setup(
     name='pytan',
     version='0.0.1',
-    packages=['pytan.core', 'pytan.ui'],
+    packages=['pytan.core', 'pytan.ui', 'pytan.log', 'pytan.gym'],
     package_path='pytan',
     install_requires=[
         str(r)
@@ -18,6 +18,9 @@ setuptools.setup(
             open(os.path.join(os.path.dirname(__file__), "requirements.txt"))
         )
     ],
+    entry_points = {
+        'console_scripts': ['pytan=pytan.cli:main'],
+    },
     author='Greer Viau',
     author_email='gviau2@gmail.com',
     description='Python Settlers of Catan Implementation',
