@@ -1,4 +1,5 @@
 import setuptools
+import pkg_resources
 import os
 
 readme_path = os.path.abspath(os.path.join(__file__, '..', 'README.md'))
@@ -11,6 +12,12 @@ setuptools.setup(
     version='0.0.1',
     packages=['pytan.core', 'pytan.ui'],
     package_path='pytan',
+    install_requires=[
+        str(r)
+        for r in pkg_resources.parse_requirements(
+            open(os.path.join(os.path.dirname(__file__), "requirements.txt"))
+        )
+    ],
     author='Greer Viau',
     author_email='gviau2@gmail.com',
     description='Python Settlers of Catan Implementation',
