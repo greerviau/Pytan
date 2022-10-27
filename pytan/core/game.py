@@ -7,10 +7,8 @@ from pytan.core.ports import PortTypes
 from pytan.core.tiles import CatanTile
 from pytan.log.logging import Logger
 from collections import defaultdict
+import numpy as np
 import random
-import os
-import copy
-import sys
 
 class Game(object):
 

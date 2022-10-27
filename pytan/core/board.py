@@ -1,6 +1,5 @@
 from pytan.core import hexmesh
 from pytan.core.piece import PieceTypes, Piece, place_piece
-from pytan.core.cards import ResourceCards
 from pytan.core.ports import PortTypes, Port, PORT_TYPE_COUNTS
 from pytan.core.tiles import *
 from pytan.core.player import Player

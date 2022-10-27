@@ -4,12 +4,25 @@ from pytan.core.state import GameStates
 from pytan.core.ports import PortTypes
 from pytan.log.logging import Logger
 from pytan.gym.agents import BotAgent, RandomAgent, GreedyAgent
+from pytan.gym import GameEncoder
 import random
 from itertools import combinations
 
 class CatanEnv(Game):
     def __init__(self, players, logger=Logger()):
         super().__init__(players=players, logger=logger)
+
+        GameEncoder.init_encoder(self)
+
+        GameEncoder.visualize_tiles()
+
+    @property
+    def encoded(self):
+        return GameEncoder.encoding()
+
+    def reset(self, randomize: bool = False):
+        super().reset(randomize=randomize)
+        GameEncoder.init_encoder(self)
 
     def get_valid_actions(self):
         actions = []
