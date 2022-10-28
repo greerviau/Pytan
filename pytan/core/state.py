@@ -37,9 +37,6 @@ class CatanGameState(object):
     def game_has_started(self) -> bool:
         return self._state != GameStates.UNDEFINED
 
-    def is_bot_turn(self) -> bool:
-        return self._game.current_player.agent
-
     def can_build_road(self, log=False) -> bool:
         if self.game_has_started():
             if self._state in [GameStates.INGAME, GameStates.ROADBUILDER]:

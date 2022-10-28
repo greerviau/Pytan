@@ -1,15 +1,17 @@
+import random
+from itertools import combinations
+import gym
+
 from pytan.core.game import Game
 from pytan.core.cards import ResourceCards
 from pytan.core.state import GameStates
 from pytan.core.ports import PortTypes
 from pytan.log.logging import Logger
-from pytan.gym.agents import BotAgent, RandomAgent, GreedyAgent
+from pytan.gym.agents import Agent, Human, BotAgent, RandomAgent, GreedyAgent
 from pytan.gym import GameEncoder
-import random
-from itertools import combinations
 
-class CatanEnv(Game):
-    def __init__(self, players, logger=Logger()):
+class CatanEnv(gym.Env):
+    def __init__(self, players):
         super().__init__(players=players, logger=logger)
 
         GameEncoder.init_encoder(self)
@@ -118,41 +120,4 @@ class CatanEnv(Game):
             if type(self.current_player.agent) == GreedyAgent:
                 function, args = self.current_player.agent.choose_action(actions, self)
             getattr(self, function)(*args)
-
-if __name__ == '__main__':
-    from pytan.core.player import Player
-    from pytan.ui.board import BoardFrame
-    import tkinter as tk
-    logger = Logger(console_log=False)
-    players = [
-        Player('P1', 0, 'red', GreedyAgent()),
-        Player('P2', 1, 'blue', RandomAgent()),
-        Player('P3', 2, 'white', RandomAgent()),
-        Player('P4', 3, 'orange', RandomAgent())
-    ]
-    game = CatanEnv(players, logger)
-    game.start_game()
-    
-    root = tk.Tk()
-    board = BoardFrame(root, game)
-    board.redraw()
-    board.pack()
-    
-    turns = []
-    wins = [0,0,0,0]
-    for i in range(100):
-        game.start_game(randomize=True)
-        while True:
-            if game.state == GameStates.GAME_OVER or game.turn > 250:
-                break
-            game.step()
-            root.update()
-        turns.append(game.turn)
-        vp = [player.total_victory_points for player in game.players]
-        winner = vp.index(max(vp))
-        wins[winner] += 1
-        print(f'\rGame: {i+1} - {vp} - turns: {game.turn}     ',end='')
-    avg_t = sum(turns)//len(turns)
-    print(f'\nWins: {wins} - avg turns: {avg_t}')
-
         

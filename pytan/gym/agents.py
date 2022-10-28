@@ -1,18 +1,31 @@
 import random
 from pytan.core.state import GameStates
+from pytan.core.player import Player
 
-class BotAgent(object):
+class Agent:
+    def __init__(self, bot: bool):
+        self.__bot = bot
+
+    @property
+    def bot(self):
+        return self.__bot
+
+class Human(Agent):
+    def __init__(self, player: Player):
+        super().__init__(False)
+
+class BotAgent(Agent):
     def __init__(self):
-        self._bot = True
+        super().__init__(True)
 
-class RandomAgent(object):
+class RandomAgent(BotAgent):
     def __init__(self):
         super().__init__()
 
     def choose_action(self, actions: list[tuple[str, None]]):
         return random.choice(actions)
 
-class GreedyAgent(object):
+class GreedyAgent(BotAgent):
     def __init__(self):
         super().__init__()
 

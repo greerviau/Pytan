@@ -10,7 +10,7 @@ with open(readme_path, 'r') as fh:
 setuptools.setup(
     name='pytan',
     version='0.0.1',
-    packages=['pytan.core', 'pytan.ui', 'pytan.log', 'pytan.gym'],
+    packages=setuptools.find_packages(),
     package_path='pytan',
     install_requires=[
         str(r)

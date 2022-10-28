@@ -4,7 +4,7 @@ from collections import defaultdict
 import copy
 
 class Player(object):
-    def __init__(self, name: str, id: int, color: str, agent: str = None):
+    def __init__(self, name: str, id: int, color: str):
         # Init
         self._name = name
         self._id = id
@@ -18,8 +18,6 @@ class Player(object):
         self._resource_production = defaultdict(int)
 
         self._diversity = defaultdict(int)
-
-        self._agent = agent
 
         self._vps = 0
 
@@ -44,10 +42,6 @@ class Player(object):
     @property
     def color(self) -> str:
         return self._color
-
-    @property
-    def agent(self) -> str:
-        return self._agent
 
     @property
     def resource_cards(self) -> dict[ResourceCards, int]:
@@ -281,7 +275,7 @@ class Player(object):
         return False
 
     def clone_player(self) -> 'Player':
-        return Player(self._name, self._id, self._color, self._agent)
+        return Player(self._name, self._id, self._color)
 
     def get_state(self) -> dict:
         return {
@@ -295,7 +289,6 @@ class Player(object):
             'cities': self._cities,
             'resource_production': self._resource_production.copy(),
             'diversity': self._diversity.copy(),
-            'agent': copy.copy(self._agent),
             'vps': self._vps,
             'knights_played': self._knights_played,
             'longest_road_chain': self._longest_road_chain,
@@ -317,7 +310,6 @@ class Player(object):
         self._cities = state['cities']
         self._resource_production = state['resource_production'].copy()
         self._diversity = state['diversity'].copy()
-        self._agent = copy.copy(state['agent'])
         self._vps = state['vps']
         self._knights_played = state['knights_played']
         self._longest_road_chain = state['longest_road_chain']

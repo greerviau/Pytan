@@ -1,6 +1,6 @@
 import tkinter as tk
 from pytan.gym.environments import CatanEnv
-from pytan.gym.agents import RandomAgent, GreedyAgent
+from pytan.gym.agents import Human, RandomAgent, GreedyAgent
 from pytan.core.player import Player
 from pytan.ui.board import BoardFrame
 from pytan.ui.controls import GameControlsFrame, PlayerLabelFrame, LogFrame
@@ -41,10 +41,10 @@ class RightSide(tk.Frame):
 if __name__ == '__main__':
 
     players = [
-        Player('P1', 0, 'red'),
-        Player('P2', 1, 'blue', GreedyAgent()),
-        Player('P3', 2, 'white', GreedyAgent()),
-        Player('P4', 3, 'orange', GreedyAgent())
+        Human(Player('P1', 0, 'red')),
+        GreedyAgent(Player('P2', 1, 'blue')),
+        GreedyAgent(Player('P3', 2, 'white')),
+        GreedyAgent()Player('P4', 3, 'orange'))
     ]
 
     game = CatanEnv(players)
