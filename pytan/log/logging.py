@@ -78,8 +78,6 @@ class Logger(object):
                     str_params.append(param.name)
                     str_params.append(param.id)
                     str_params.append(param.color)
-                    if param.agent:
-                        str_params.append(param.agent.__class__)
                 elif type(param) in [ResourceCards, DevCards]:
                     str_params.append(param.value)
                 elif type(param) in [int, float, bool, str]:

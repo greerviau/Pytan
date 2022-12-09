@@ -7,12 +7,17 @@ from pytan.core.cards import ResourceCards
 from pytan.core.state import GameStates
 from pytan.core.ports import PortTypes
 from pytan.log.logging import Logger
-from pytan.gym.agents import Agent, Human, BotAgent, RandomAgent, GreedyAgent
+from pytan.gym.agents import Agent, RandomAgent, GreedyAgent
 from pytan.gym import GameEncoder
 
-class CatanEnv(gym.Env):
+class CatanEnv(Game, gym.Env):
     def __init__(self, players):
-        super().__init__(players=players, logger=logger)
+        super().__init__(players=players)
+
+        self.valid_actions = []
+
+        self.action_space = gym.spaces.Discrete()
+        self.observation_space = gym.spaces.Box(0, 1, (self.total_cards * self.total_positions + self.n_players + self.action_space.n ,))
 
         GameEncoder.init_encoder(self)
 
@@ -56,8 +61,8 @@ class CatanEnv(gym.Env):
 
         if self.state.can_pass_turn() and not actions:
             actions.append(('pass_turn', []))
-        #print(actions)
-        return actions
+        
+        self.valid_actions = actions
 
     def get_discard_options(self):
         actions = []
@@ -111,7 +116,7 @@ class CatanEnv(gym.Env):
                     trades.append(('offer_trade', [[(g_card, e)], [(w_card, 1)], []]))
         return trades
 
-    def step(self):
+    def step(self, action):
         actions = self.get_valid_actions()
         if self.current_player.agent:
             function, args = '', []

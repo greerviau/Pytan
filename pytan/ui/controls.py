@@ -90,22 +90,22 @@ class GameControlsFrame(tk.Frame):
         self.save_button.pack()
 
     def notify(self, observable: object):
-        if self.game.state == GameStates.DISCARDING and not self.game.state.is_bot_turn():
+        if self.game.state == GameStates.DISCARDING:
             self.discard_frame = DiscardFrame(self, self.game, self.ui_state)
             self.discard_frame.pack(pady=5)
-        elif self.game.state == GameStates.STEALING and not self.game.state.is_bot_turn():
+        elif self.game.state == GameStates.STEALING:
             self.steal_frame = StealFrame(self, self.game, self.ui_state)
             self.steal_frame.pack(pady=5)
-        elif self.game.state == GameStates.ACCEPTING_TRADE and not self.game.state.is_bot_turn():
+        elif self.game.state == GameStates.ACCEPTING_TRADE:
             self.accept_trade_frame = AcceptTradeFrame(self, self.game, self.ui_state)
             self.accept_trade_frame.pack(pady=5)
-        elif self.game.state == GameStates.CONFIRMING_TRADE and not self.game.state.is_bot_turn():
+        elif self.game.state == GameStates.CONFIRMING_TRADE:
             self.confirm_trade_frame = ConfirmTradeFrame(self, self.game, self.ui_state)
             self.confirm_trade_frame.pack(pady=5)
         else:
-            self.clear_discard()
+            self.discard_frame.pack_forget()
             self.steal_frame.pack_forget()
-            self.clear_accept_trade()
+            self.accept_trade_frame.pack_forget()
             self.confirm_trade_frame.pack_forget()
         
         self.set_states()

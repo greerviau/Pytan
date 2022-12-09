@@ -435,6 +435,9 @@ class Game(object):
             self._pass_turn()
             self.notify()
 
+    def can_build_road(self, edge_coord: int) -> bool:
+        return edge_coord in self.legal_road_placements()
+
     def legal_road_placements(self) -> list[int]:
         if self._game_state == GameStates.STARTING_ROAD:
             return self._board.node_neighboring_edges(self.current_turn_player.last_settlement_built)
@@ -480,6 +483,9 @@ class Game(object):
                     self._game_state.set_state(GameStates.INGAME)       
                 self.notify()
 
+    def can_build_settlement(self, node_coord: int) -> bool:
+        return node_coord in self.legal_settlement_placements()
+
     def legal_settlement_placements(self) -> list[int]:
         if self._game_state == GameStates.STARTING_SETTLEMENT:
             return self._board.legal_starting_settlement_placements(self.current_turn_player.id)
@@ -519,6 +525,9 @@ class Game(object):
                     self.current_turn_player.add_tile(self._board.tiles[t])
                 self._game_state.set_state(GameStates.INGAME)
                 self.notify()
+
+    def can_build_city(self, node_coord: int) -> bool:
+        return node_coord in self.legal_city_placements()
 
     def legal_city_placements(self) -> list[int]:
         return self._board.legal_city_placements(self.current_turn_player.id)
