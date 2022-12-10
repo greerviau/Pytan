@@ -185,9 +185,9 @@ class Player(object):
         self._resource_cards[card] -= 1
 
     def remove_all_resource_card(self, card: ResourceCards) -> int:
-        og_len = self.n_resource_cards
+        n_resource = self._resource_cards[card]
         self._resource_cards[card] = 0
-        return og_len - self.n_resource_cards
+        return n_resource
 
     def remove_resource_cards(self, cards: list[tuple[ResourceCards, int]]):
         for card, n in cards:

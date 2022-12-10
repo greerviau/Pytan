@@ -19,9 +19,9 @@ class CatanEnv(Game, gym.Env):
         self.action_space = gym.spaces.Discrete()
         self.observation_space = gym.spaces.Box(0, 1, (self.total_cards * self.total_positions + self.n_players + self.action_space.n ,))
 
-        GameEncoder.init_encoder(self)
+        #GameEncoder.init_encoder(self)
 
-        GameEncoder.visualize_tiles()
+        #GameEncoder.visualize_tiles()
 
     @property
     def encoded(self):
@@ -29,7 +29,7 @@ class CatanEnv(Game, gym.Env):
 
     def reset(self, randomize: bool = False):
         super().reset(randomize=randomize)
-        GameEncoder.init_encoder(self)
+        #GameEncoder.init_encoder(self)
 
     def get_valid_actions(self):
         actions = []

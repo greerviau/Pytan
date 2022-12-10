@@ -3,6 +3,7 @@ from pytan.core.game import Game
 from pytan.core.cards import ResourceCards, DevCards
 from pytan.core.player import Player
 import os
+import sys
 
 class Replay(object):
     def __init__(self, log_file: str, console_log: bool = False):
@@ -127,7 +128,8 @@ class Replay(object):
             print('Start the replay first')
 
 if __name__ == '__main__':
-    replay = Replay('./test_logs/test_1.catan', console_log=True)
+    log_file = sys.argv[1]
+    replay = Replay(log_file, console_log=True)
     replay.start()
     while replay.has_next:
         replay.step_forward()

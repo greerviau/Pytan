@@ -28,8 +28,7 @@ class RightSide(tk.Frame):
 
         game.start_game()
 
-if __name__ == '__main__':
-
+def run():
     game = Game()
     ui_state = CatanUIState(game)
         
@@ -40,3 +39,4 @@ if __name__ == '__main__':
     right_side.pack(side=tk.RIGHT, fill=tk.Y)
 
     app.mainloop()
+    

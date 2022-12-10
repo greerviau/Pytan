@@ -44,7 +44,7 @@ if __name__ == '__main__':
         Human(Player('P1', 0, 'red')),
         GreedyAgent(Player('P2', 1, 'blue')),
         GreedyAgent(Player('P3', 2, 'white')),
-        GreedyAgent()Player('P4', 3, 'orange'))
+        GreedyAgent(Player('P4', 3, 'orange'))
     ]
 
     game = CatanEnv(players)
