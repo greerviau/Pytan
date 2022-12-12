@@ -12,8 +12,10 @@ import random
 
 class Game(object):
 
-    def __init__(self, players: list[Player] = [], logger: Logger = Logger(console_log=True), seed: float = random.random()):
+    def __init__(self, players: list[Player] = [], logger: Logger = None, seed: float = random.random()):
         # Init
+        if not logger:
+            logger = Logger(console_log=True)
         self._logger = logger
 
         self._prng = random.Random()
@@ -845,7 +847,7 @@ class Game(object):
         return game
     
     def undo(self, update:bool = True):
-        if len(self._stored_states) > 0 and self._state_idx > 0:
+        if len(self._stored_states) > 0 and self._state_idx > -1:
             self._state_idx -= 1
             self.restore(self._stored_states[self._state_idx])
             self.notify(new=False, update=update)

@@ -8,76 +8,79 @@ from pytan.core.state import GameStates
 from pytan.core.ports import PortTypes
 from pytan.log.logging import Logger
 from pytan.gym.agents import Agent, RandomAgent, GreedyAgent
-from pytan.gym import GameEncoder
 
-class CatanEnv(Game, gym.Env):
-    def __init__(self, players):
-        super().__init__(players=players)
+class CatanEnv(gym.Env):
+    def __init__(self, agents: list[Agent], logger = None, verbose = False, manual = False):
+        super(CatanEnv, self).__init__()
+        self.name = 'catan'
+        self.manual = manual
 
-        self.valid_actions = []
+        self.agents = dict(zip([agent.player_id for agent in agents], agents))
 
-        self.action_space = gym.spaces.Discrete()
-        self.observation_space = gym.spaces.Box(0, 1, (self.total_cards * self.total_positions + self.n_players + self.action_space.n ,))
+        self.game = Game(players=[agent.player for agent in agents], logger=logger)
 
-        #GameEncoder.init_encoder(self)
+        #self.valid_actions = []
 
-        #GameEncoder.visualize_tiles()
+        #self.action_space = gym.spaces.Discrete()
+        #self.observation_space = gym.spaces.Box(0, 1, (self.total_cards * self.total_positions + self.n_players + self.action_space.n ,))
+
+        self.verbose = verbose
 
     @property
-    def encoded(self):
-        return GameEncoder.encoding()
+    def current_player(self):
+        return self.agents[self.game.current_player.id]
 
-    def reset(self, randomize: bool = False):
-        super().reset(randomize=randomize)
-        #GameEncoder.init_encoder(self)
-
-    def get_valid_actions(self):
+    @property
+    def legal_actions(self):
         actions = []
-        if self.state.can_roll():
+        if self.game.state.can_roll():
             actions.append(('roll', []))
-        if self.state == GameStates.DISCARDING:
+        if self.game.state == GameStates.DISCARDING:
             actions.extend(self.get_discard_options())
-        if self.state == GameStates.MOVING_ROBBER:
+        if self.game.state == GameStates.MOVING_ROBBER:
             actions.extend(self.get_valid_robber())
-        if self.state == GameStates.STEALING:
+        if self.game.state == GameStates.STEALING:
             actions.extend(self.get_valid_steals())
-        if self.state == GameStates.ACCEPTING_TRADE:
+        if self.game.state == GameStates.ACCEPTING_TRADE:
             actions.append(('accept_trade', []))
             actions.append(('decline_trade', []))
-        if self.state.can_buy_dev_card():
+        if self.game.state.can_buy_dev_card():
             actions.append(('buy_dev_card', []))
-        if self.state.can_play_knight():
+        if self.game.state.can_play_knight():
             actions.append(('play_knight', []))
-        if self.state.can_play_monopoly():
+        if self.game.state.can_play_monopoly():
             actions.extend(self.get_valid_monopolies())
-        if self.state.can_play_year_plenty():
+        if self.game.state.can_play_year_plenty():
             actions.extend(self.get_valid_year_plenty())
-        if self.state.can_play_road_builder():
+        if self.game.state.can_play_road_builder():
             actions.append(('play_road_builder', []))
-        if self.state.can_trade():
+        if self.game.state.can_trade():
             actions.extend(self.get_valid_trades())
 
         actions.extend(self.get_valid_build_actions())
 
-        if self.state.can_pass_turn() and not actions:
+        if self.game.state.can_pass_turn() and not actions:
             actions.append(('pass_turn', []))
-        
-        self.valid_actions = actions
+
+        return actions
+
+    def is_legal(self, action):
+        return action in self.legal_actions
 
     def get_discard_options(self):
         actions = []
-        n = self.current_player.n_resource_cards // 2
-        discards = set(combinations(self.current_player.resource_cards_list, n))
+        n = self.game.current_player.n_resource_cards // 2
+        discards = set(combinations(self.game.current_player.resource_cards_list, n))
         for discard in discards:
             unique = set(discard)
             actions.append(('discard', [[(card, discard.count(card)) for card in unique]]))
         return actions
 
     def get_valid_robber(self):
-        return [('move_robber', [coord]) for coord in self.board.legal_robber_placements() if self.board.is_player_on_tile(coord, self.current_player.id)]
+        return [('move_robber', [coord]) for coord in self.game.board.legal_robber_placements() if self.game.board.is_player_on_tile(coord, self.game.current_player.id)]
 
     def get_valid_steals(self):
-        return [('steal', [p.id]) for p in self.players_to_steal_from]
+        return [('steal', [p.id]) for p in self.game.players_to_steal_from]
 
     def get_valid_monopolies(self):
         return [('play_monopoly', [card]) for card in ResourceCards]
@@ -91,14 +94,14 @@ class CatanEnv(Game, gym.Env):
 
     def get_valid_build_actions(self):
         actions = []
-        if self.state.can_build_road() or self.state == GameStates.STARTING_ROAD:
-            for coord in self.legal_road_placements():
+        if self.game.state.can_build_road() or self.game.state == GameStates.STARTING_ROAD:
+            for coord in self.game.legal_road_placements():
                 actions.append(('build_road', [coord]))
-        if self.state.can_build_settlement() or self.state == GameStates.STARTING_SETTLEMENT:
-            for coord in self.legal_settlement_placements():
+        if self.game.state.can_build_settlement() or self.game.state == GameStates.STARTING_SETTLEMENT:
+            for coord in self.game.legal_settlement_placements():
                 actions.append(('build_settlement', [coord]))
-        if self.state.can_build_city():
-            for coord in self.legal_city_placements():
+        if self.game.state.can_build_city():
+            for coord in self.game.legal_city_placements():
                 actions.append(('build_city', [coord]))
         return actions
 
@@ -106,23 +109,21 @@ class CatanEnv(Game, gym.Env):
         trades = []
         for g_card in ResourceCards:
             e = 4
-            if self._board.is_player_on_port(self.current_player.id, PortTypes(g_card.value)):
+            if self.game.board.is_player_on_port(self.game.current_player.id, PortTypes(g_card.value)):
                 e = 2
-            elif self._board.is_player_on_port(self.current_player.id, PortTypes.ANY):
+            elif self.game.board.is_player_on_port(self.game.current_player.id, PortTypes.ANY):
                 e = 3
-            n = self.current_player.count_resource_cards(g_card)
+            n = self.game.current_player.count_resource_cards(g_card)
             if n >= e:
                 for w_card in [c for c in ResourceCards if c != g_card]:
                     trades.append(('offer_trade', [[(g_card, e)], [(w_card, 1)], []]))
         return trades
+    
+    def reset(self):
+        self.game.reset(randomize=True)
 
     def step(self, action):
-        actions = self.get_valid_actions()
-        if self.current_player.agent:
-            function, args = '', []
-            if type(self.current_player.agent) == RandomAgent:
-                function, args = self.current_player.agent.choose_action(actions)
-            if type(self.current_player.agent) == GreedyAgent:
-                function, args = self.current_player.agent.choose_action(actions, self)
-            getattr(self, function)(*args)
+        if self.is_legal(action):
+            function, args = action
+            getattr(self.game, function)(*args)
         

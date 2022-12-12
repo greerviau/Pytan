@@ -1,41 +1,56 @@
 import random
 from pytan.core.state import GameStates
 from pytan.core.player import Player
+from pytan.core.game import Game
 
 class Agent:
-    def __init__(self, bot: bool):
+    def __init__(self, bot: bool, player: Player):
         self.__bot = bot
+        self.__player = player
 
     @property
-    def bot(self):
+    def bot(self) -> bool:
         return self.__bot
+
+    @property
+    def player(self) -> Player:
+        return self.__player
+
+    @property
+    def player_id(self) -> int:
+        return self.__player.id
 
 class Human(Agent):
     def __init__(self, player: Player):
-        super().__init__(False)
+        super().__init__(False, player)
 
 class BotAgent(Agent):
-    def __init__(self):
-        super().__init__(True)
+    def __init__(self, player: Player):
+        super().__init__(True, player)
 
 class RandomAgent(BotAgent):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, player: Player):
+        super().__init__(player)
 
-    def choose_action(self, actions: list[tuple[str, None]]):
+    def choose_action(self, actions: list[tuple[str, None]], game: Game):
+        if len(actions) == 0:
+            raise RuntimeError('No actions')
         return random.choice(actions)
 
 class GreedyAgent(BotAgent):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, player: Player):
+        super().__init__(player)
 
-    def choose_action(self, actions: list[tuple[str, None]], game: 'Game'):
+    def choose_action(self, actions: list[tuple[str, None]], game: Game):
+        if len(actions) == 0:
+            raise RuntimeError('No actions')
+
         self.game = game
         scores = []
         for function, args in actions:
-            getattr(game, function)(*args)
+            getattr(self.game, function)(*args)
             scores.append(self.score_state(function))
-            game.undo()
+            self.game.undo()
         m = max(scores)
         c = scores.count(max)
         action = actions[scores.index(m)]

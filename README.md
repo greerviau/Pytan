@@ -3,8 +3,7 @@ A Python implementation of Settlers of Catan
 
 ## Installation
 ```
-git clone https://github.com/greerviau/Pytan.git
-python3 -m pip install -e ./Pytan
+pip install git+https://github.com/greerviau/Pytan.git
 ```
 
 ## Usage
@@ -114,7 +113,8 @@ if __name__ == '__main__':
 - [x] Complete GUI
 - [x] Build Replay System
 - [ ] Build GYM Environment for RL
-
+- [ ] Fix replay (currently broken)
+  - Bug is somewhere in the game state restore
 ## References
 Shoutout to [rosshamish](https://github.com/rosshamish) for building some very usefull Catan projects that I referenced to help build this project. None of these were utilized directly because some features were out of date (and I wanted to build it myself anyway), but they were super helpful in understanding some of the underlying logic in building Catan.
 
