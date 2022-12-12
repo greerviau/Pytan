@@ -1,4 +1,4 @@
-from pytan.tests import play_game
+from pytan import cli
 
 if __name__ == '__main__':
-    play_game.run()
+    cli.main()

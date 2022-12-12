@@ -28,7 +28,7 @@ class RightSide(tk.Frame):
 
         game.start_game()
 
-def run():
+def main():
     game = Game()
     ui_state = CatanUIState(game)
         

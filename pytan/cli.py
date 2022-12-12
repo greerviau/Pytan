@@ -1,5 +1,5 @@
 import click
-from .tests import bot_game, play_game, replay, sim_game
+from pytan.tests import bot_game, play_game, replay, sim_game
 
 @click.command()
 @click.option('--players', '-p', default=4, help='Number of players')
