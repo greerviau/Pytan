@@ -44,6 +44,11 @@ class Game(object):
             self.add_player(Player('P4', 3, 'orange'))
         player_ids = set([p.id for p in self._players])
         assert len(player_ids) == len(self._players)
+
+        if len(players) == 2:
+            self.POINTS_TO_WIN = 15
+        else:
+            self.POINTS_TO_WIN = 10
         
         self.set_starting_player(self._prng.randint(0,len(self._players)-1))
 
@@ -255,7 +260,7 @@ class Game(object):
                 self._stored_states.append(self.get_state())
             self._state_idx += 1
         for player in self._players:
-            if player.total_victory_points >= 10:
+            if player.total_victory_points >= self.POINTS_TO_WIN:
                 self._logger.log(f'GAME OVER {self.current_turn_player} wins!')
                 self._game_state.set_state(GameStates.GAME_OVER)
         if update:

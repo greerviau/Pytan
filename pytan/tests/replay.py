@@ -8,6 +8,6 @@ if __name__ == '__main__':
     log_file = sys.argv[1]
     replay = Replay(log_file)
     app = tk.Tk()
-    replaygui = ReplayGUI(app, replay.game)
+    replaygui = ReplayGUI(app, replay)
     replaygui.pack()
     app.mainloop()

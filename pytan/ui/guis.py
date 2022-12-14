@@ -28,14 +28,16 @@ class RightSide(tk.Frame):
         game.start_game()
 
 class ReplayGUI(tk.Frame):
-    def __init__(self, master, game):
+    def __init__(self, master, replay):
         tk.Frame.__init__(self, master)
+
+        game = replay.game
 
         ui_state = CatanUIState(game)
         ui_state.set_state(UIStates.INGAME)
 
         player_label_frame = PlayerLabelFrame(self, game, ui_state)
-        self.replay_frame = ReplayControl(self, self.replay)
+        self.replay_frame = ReplayControl(self, replay)
         board_frame = BoardFrame(self, game, ui_state, interact=False)
         log_frame = LogFrame(self, game, ui_state, height=46)
 

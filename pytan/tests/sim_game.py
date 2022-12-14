@@ -7,13 +7,14 @@ from pytan.log.logging import Logger
 import tkinter as tk
 
 if __name__ == '__main__':
+    logger = Logger(console_log=False)
     agents = [
         GreedyAgent(Player('P1', 0, 'red')),
         RandomAgent(Player('P2', 1, 'blue')),
         RandomAgent(Player('P3', 2, 'white')),
         RandomAgent(Player('P4', 3, 'orange'))
     ]
-    game = CatanEnv(agents = agents)
+    game = CatanEnv(agents = agents, logger=False)
     game.start_game()
 
     root = tk.Tk()

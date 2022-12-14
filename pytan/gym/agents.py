@@ -32,7 +32,7 @@ class RandomAgent(BotAgent):
     def __init__(self, player: Player):
         super().__init__(player)
 
-    def choose_action(self, actions: list[tuple[str, None]], game: Game):
+    def choose_action(self, actions: list[tuple[str, None]], game_state: dict):
         if len(actions) == 0:
             raise RuntimeError('No actions')
         return random.choice(actions)
@@ -41,11 +41,11 @@ class GreedyAgent(BotAgent):
     def __init__(self, player: Player):
         super().__init__(player)
 
-    def choose_action(self, actions: list[tuple[str, None]], game: Game):
+    def choose_action(self, actions: list[tuple[str, None]], game_state: dict):
         if len(actions) == 0:
             raise RuntimeError('No actions')
 
-        self.game = game
+        self.game = Game.create_from_state(game_state)
         scores = []
         for function, args in actions:
             getattr(self.game, function)(*args)
