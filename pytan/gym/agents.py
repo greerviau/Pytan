@@ -52,38 +52,21 @@ class GreedyAgent(BotAgent):
         self.game = Game.create_from_state(game_state)
 
         scores = []
-        i = 0
+        j = 0
         for function, args in actions:
-            i += 1
-            #print(function)
+            print(j)
+            j += 1
             getattr(self.game, function)(*args)
-            #getattr(game, function)(*args)
-            #print(len(self.game._stored_states))
-            #print(self.game._state_idx)
-            #print("=====")
-            #print(len(game._stored_states))
-            #print(game._state_idx)
-            state_1 = self.game.get_state()
-            #state_2 = game.get_state()
-            '''
-            for key in state_1:
-                if state_1[key] != state_2[key]:
-                    print(key)
-                    print("state 1")
-                    print(state_1[key])
-                    print("state 2")
-                    print(state_2[key])
-            '''
             scores.append(self.score_state())
             self.game.undo()
-            #game.undo()
-            #if i == 3:
-                #sys.exit(0)
         m = max(scores)
-        c = scores.count(max)
-        action = actions[scores.index(m)]
+        c = scores.count(m)
         if c > 1:
-            action = random.choice([a for a in actions if a == m])
+            i = random.choice([i for i, s in enumerate(scores) if s == m])
+        else:
+            i = scores.index(m)
+        print('choice', i)
+        action = actions[i]
         return action
 
     def score_state(self):
@@ -103,17 +86,22 @@ class GreedyAgent(BotAgent):
         score += curr_player.can_buy_dev_card() * 0.2
 
         # Robber placement
-        robber = self.game.board.robber.coord
-        tile = self.game.board.tiles[robber]
-        prod = tile.prod_points
-        n_settlements = len(self.game.board.settlements_on_tile(robber))
-        n_cities = len(self.game.board.cities_on_tile(robber))
-        players = set(self.game.board.players_on_tile(robber))
-        vps = sum([self.game.get_player_by_id(p).victory_points for p in players])
-        l = len(players) if len(players) > 0 else 1
-        score += prod * (n_settlements + (n_cities*2)) * (vps/l)
-        if self.game.board.is_player_on_tile(robber, curr_player.id):
-            score -= 100
+        if self.game.state.is_moving_robber():
+            print('Moving robber')
+            robber = self.game.board.robber.coord
+            tile = self.game.board.tiles[robber]
+            prod = tile.prod_points
+            n_settlements = len(self.game.board.settlements_on_tile(robber))
+            n_cities = len(self.game.board.cities_on_tile(robber))
+            players = set(self.game.board.players_on_tile(robber))
+            vps = sum([self.game.get_player_by_id(p).victory_points for p in players])
+            l = len(players) if len(players) > 0 else 1
+            if not self.game.board.is_player_on_tile(robber, curr_player.id):
+                score += prod * (n_settlements + (n_cities*2)) * (vps/l)
+                print('player not on tile')
+            else:
+                score -= 100
+                print('player on tile')
 
         return score
 

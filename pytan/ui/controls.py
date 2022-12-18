@@ -153,13 +153,12 @@ class LogFrame(tk.Frame):
         self.text.see(tk.END)
 
 class PlayerLabelFrame(tk.Frame):
-    def __init__(self, master: tk.Frame, game: Game, ui_state: CatanUIState):
+    def __init__(self, master: tk.Frame, game: Game):
         tk.Frame.__init__(self, master)
 
         self.master = master
         self.game = game
         self.game.add_observer(self)
-        self.ui_state = ui_state
 
         self._players = [tk.StringVar() for _ in self.game.players]
         self._cur_player = self.game.current_player
@@ -580,7 +579,7 @@ class YearPlentyFrame(tk.LabelFrame):
             if ResourceCards.BRICK != self._resource_1:
                 self.choice_1_brick_button.configure(state='disabled')
             if ResourceCards.ORE != self._resource_1:
-                self.ore_button.configure(state='disabled')
+                self.choice_1_ore_button.configure(state='disabled')
         else:
             self.choice_1_wood_button.configure(state='normal')
             self.choice_1_wheat_button.configure(state='normal')
@@ -598,7 +597,7 @@ class YearPlentyFrame(tk.LabelFrame):
             if ResourceCards.BRICK != self._resource_2:
                 self.choice_2_brick_button.configure(state='disabled')
             if ResourceCards.ORE != self._resource_2:
-                self.ore_button.configure(state='disabled')
+                self.choice_2_ore_button.configure(state='disabled')
         else:
             self.choice_2_wood_button.configure(state='normal')
             self.choice_2_wheat_button.configure(state='normal')
@@ -639,7 +638,7 @@ class YearPlentyFrame(tk.LabelFrame):
             self._resource_2 = ResourceCards.ORE
 
     def on_confirm(self):
-        if self.resource_1 and self._resource_2:
+        if self._resource_1 and self._resource_2:
             self.master.clear_year_plenty()
             self.game.play_year_plenty(self._resource_1, self._resource_2)
 

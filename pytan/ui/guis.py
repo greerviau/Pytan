@@ -7,7 +7,7 @@ class LeftSide(tk.Frame):
     def __init__(self, master, game, ui_state):
         tk.Frame.__init__(self, master)
 
-        player_label_frame = PlayerLabelFrame(self, game, ui_state)
+        player_label_frame = PlayerLabelFrame(self, game)
         board_frame = BoardFrame(self, game, ui_state)
         player_label_frame.pack(pady=5, padx=5, anchor=tk.NW)
         board_frame.pack()

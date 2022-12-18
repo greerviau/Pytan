@@ -77,7 +77,7 @@ class CatanEnv(gym.Env):
         return actions
 
     def get_valid_robber(self):
-        return [('move_robber', [coord]) for coord in self.game.board.legal_robber_placements() if self.game.board.is_player_on_tile(coord, self.game.current_player.id)]
+        return [('move_robber', [coord]) for coord in self.game.board.legal_robber_placements()]
 
     def get_valid_steals(self):
         return [('steal', [p.id]) for p in self.game.players_to_steal_from]
