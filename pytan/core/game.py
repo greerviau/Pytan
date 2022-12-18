@@ -72,6 +72,10 @@ class Game(object):
         return self._players
     
     @property
+    def n_players(self) -> int:
+        return len(self._players)
+    
+    @property
     def board(self) -> Board:
         return self._board
 
@@ -432,11 +436,11 @@ class Game(object):
         self._knight_played_this_turn = False
         self._turn += 1
         d = 1
-        if self._turn == 4 or self._turn == 8:
+        if self._turn == self.n_players or self._turn == (2*self.n_players):
             d = 0
-        elif self._turn >= 5 and self._turn < 8:
+        elif self._turn >= self.n_players+1 and self._turn < (2*self.n_players):
             d = -1
-        if self._turn >= 8:
+        if self._turn >= (2*self.n_players):
             self._game_state.set_state(GameStates.INGAME)
         self._current_player_idx += d
         if self._current_player_idx >= len(self._players):

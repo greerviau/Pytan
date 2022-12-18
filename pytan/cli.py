@@ -78,13 +78,14 @@ def main(human, bot, replay_file, simulate):
 
         if not simulate:
         
-            def bot_loop():
+            def bot_loop(app):
                 while True:
                     current_player_id = env.game.current_player.id
                     agent = env.agents[current_player_id]
                     if agent.bot:
                         action = agent.choose_action(env.legal_actions, env.game.get_state())
                         env.step(action)
+                        app.update()
                     time.sleep(0.5)
             
             ui_state = CatanUIState(game)
@@ -96,14 +97,14 @@ def main(human, bot, replay_file, simulate):
             right_side.pack(side=tk.RIGHT, fill=tk.Y)
 
             if not human_only_game:
-                bot_thread = threading.Thread(target=bot_loop, daemon=True)
+                bot_thread = threading.Thread(target=bot_loop, args=(app,), daemon=True)
                 bot_thread.start()
 
             app.mainloop()
         else:
             start = time.time()
             turns = []
-            wins = [0,0,0,0]
+            wins = [0 for i in range(game.n_players)]
             for i in range(simulate):
                 game.start_game(randomize=True)
                 while True:
@@ -120,4 +121,6 @@ def main(human, bot, replay_file, simulate):
             avg_t = sum(turns)//len(turns)
 
             lapse = round(time.time() - start, 2)
-            print(f'\nWins: {wins} - avg turns: {avg_t} - took {lapse} seconds')
+            print(f'\n\nWins: {wins}')
+            print(f'avg turns: {avg_t}')
+            print(f'took {lapse} seconds')
