@@ -32,5 +32,5 @@ PORT_TYPE_COUNTS = {
 
 Port = namedtuple('Port', ['coord_1', 'coord_2', 'tile', 'direction', 'port_type'])
 
-def create_port(coord_1: int, coord_2: int, tile: TileTypes, direction: Directions, port_type: PortTypes):
+def create_port(coord_1: int, coord_2: int, tile: int, direction: Directions, port_type: PortTypes):
     return Port(coord_1, coord_2, tile, direction, port_type)

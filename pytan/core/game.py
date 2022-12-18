@@ -30,6 +30,7 @@ class Game(object):
         self._state_idx = -1
 
         self._observers = set()
+        self._notify_observers = True
 
         self._board = Board(seed=seed)
 
@@ -61,6 +62,10 @@ class Game(object):
     @property
     def observers(self) -> set:
         return self._observers
+
+    @property
+    def notify_observers(self) -> bool:
+        return self._notify_observers
 
     @property
     def players(self) -> list[Player]:
@@ -191,6 +196,10 @@ class Game(object):
     @state.setter
     def state(self, s: GameStates):
         self._game_state.set_state(s)
+
+    @notify_observers.setter
+    def notify_observers(self, notify: bool):
+        self._notify_observers = notify
 
     def init_game_vars(self):
         # Init game variables
@@ -799,6 +808,7 @@ class Game(object):
             'players': [player.get_state() for player in self._players],
             'logger': self._logger.get_state(),
             'prng': self._prng.getstate(),
+            'points_to_win': self.POINTS_TO_WIN,
             'state': self._game_state.state,
             'resource_card_counts': self._resource_card_counts.copy(),
             'dev_cards': self._dev_cards.copy(),
@@ -825,6 +835,7 @@ class Game(object):
         self._players = [Player.create_from_state(s) for s in state['players']]
         self._logger = Logger.create_from_state(state['logger'])
         self._prng.setstate(state['prng'])
+        self.POINTS_TO_WIN = state['points_to_win']
         self._game_state.set_state(state['state'])
         self._resource_card_counts = state['resource_card_counts'].copy()
         self._dev_cards = state['dev_cards'].copy()
@@ -849,6 +860,7 @@ class Game(object):
     def create_from_state(state: dict) -> 'Game':
         game = Game()
         game.restore(state)
+        game.notify(new=True, update=False)
         return game
     
     def undo(self, update:bool = True):

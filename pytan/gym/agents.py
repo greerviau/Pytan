@@ -2,6 +2,8 @@ import random
 from pytan.core.state import GameStates
 from pytan.core.player import Player
 from pytan.core.game import Game
+import pickle
+import sys
 
 class Agent:
     def __init__(self, bot: bool, player: Player):
@@ -45,12 +47,38 @@ class GreedyAgent(BotAgent):
         if len(actions) == 0:
             raise RuntimeError('No actions')
 
+        #print(game.get_state())
+
         self.game = Game.create_from_state(game_state)
+
         scores = []
+        i = 0
         for function, args in actions:
+            i += 1
+            #print(function)
             getattr(self.game, function)(*args)
-            scores.append(self.score_state(function))
+            #getattr(game, function)(*args)
+            #print(len(self.game._stored_states))
+            #print(self.game._state_idx)
+            #print("=====")
+            #print(len(game._stored_states))
+            #print(game._state_idx)
+            state_1 = self.game.get_state()
+            #state_2 = game.get_state()
+            '''
+            for key in state_1:
+                if state_1[key] != state_2[key]:
+                    print(key)
+                    print("state 1")
+                    print(state_1[key])
+                    print("state 2")
+                    print(state_2[key])
+            '''
+            scores.append(self.score_state())
             self.game.undo()
+            #game.undo()
+            #if i == 3:
+                #sys.exit(0)
         m = max(scores)
         c = scores.count(max)
         action = actions[scores.index(m)]
@@ -58,7 +86,7 @@ class GreedyAgent(BotAgent):
             action = random.choice([a for a in actions if a == m])
         return action
 
-    def score_state(self, function: str):
+    def score_state(self):
         curr_player = self.game.current_player if self.game.state != GameStates.STARTING_SETTLEMENT else self.game.players[self.game.current_player_idx-1]
         score = curr_player.total_victory_points
         road_score = ((curr_player.longest_road_chain / 12) * (self.calculate_exploration_score(curr_player.id) * 0.01)) + curr_player.longest_road * 2
