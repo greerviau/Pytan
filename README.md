@@ -98,7 +98,7 @@ catan.play_road_builder()
 catan.end_game(log=True)
 ```
 
-### GYM Agents
+### GYM Environment
 ```python
 players = [
     RandomAgent(Player('Random1', 0, 'red')),
