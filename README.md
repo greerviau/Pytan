@@ -113,7 +113,7 @@ while True:
     current_player_id = env.game.current_player.id
     agent = env.agents[current_player_id]
     if agent.bot:
-        action = agent.choose_action(env.legal_actions, env.game.get_state())
+        action = agent.choose_action(env)
         env.step(action)
 ```
 
