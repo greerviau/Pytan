@@ -63,7 +63,7 @@ def run_human_game(env, human_only_game):
         current_player_id = env.game.current_player.id
         agent = env.agents[current_player_id]
         if agent.bot:
-            action = agent.choose_action(env.legal_actions, env.game.get_state())
+            action = agent.choose_action(env)
             env.step(action)
         app.after(500, bot_loop)
 
@@ -79,8 +79,7 @@ def simulate_game(env):
     while True:
         if game.state == GameStates.GAME_OVER:
             break
-        actions = env.legal_actions
-        action = env.current_player.choose_action(actions, game.get_state())
+        action = env.current_player.choose_action(env)
         env.step(action)
 
 def simulate_n_games(env, n_games):

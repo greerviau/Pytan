@@ -2,8 +2,6 @@ import random
 from pytan.core.state import GameStates
 from pytan.core.player import Player
 from pytan.core.game import Game
-import pickle
-import sys
 
 class Agent:
     def __init__(self, bot: bool, player: Player):
@@ -34,7 +32,8 @@ class RandomAgent(BotAgent):
     def __init__(self, player: Player):
         super().__init__(player)
 
-    def choose_action(self, actions: list[tuple[str, None]], game_state: dict):
+    def choose_action(self, env: 'CatanEnv'):
+        actions = env.legal_actions
         if len(actions) == 0:
             raise RuntimeError('No actions')
         return random.choice(actions)
@@ -43,13 +42,14 @@ class GreedyAgent(BotAgent):
     def __init__(self, player: Player):
         super().__init__(player)
 
-    def choose_action(self, actions: list[tuple[str, None]], game_state: dict):
+    def choose_action(self, env: 'CatanEnv'):
+        actions = env.legal_actions
         if len(actions) == 0:
             raise RuntimeError('No actions')
 
         #print(game.get_state())
 
-        self.game = Game.create_from_state(game_state)
+        self.game = Game.create_from_state(env.game.get_state())
 
         scores = []
         for function, args in actions:
