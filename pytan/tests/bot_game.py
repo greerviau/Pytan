@@ -2,7 +2,7 @@ import tkinter as tk
 from pytan.gym.environments import CatanEnv
 from pytan.gym.agents import Human, RandomAgent, GreedyAgent
 from pytan.core.player import Player
-from pytan.ui.guis import LeftSide, RightSide
+from pytan.ui.guis import BoardAndPlayerLabel, ControlsAndLog
 from pytan.ui.state import CatanUIState
 import threading
 import time
@@ -30,8 +30,8 @@ if __name__ == '__main__':
             time.sleep(0.5)
         
     app = tk.Tk()
-    left_side = LeftSide(app, env.game, ui_state)
-    right_side = RightSide(app, env.game, ui_state)
+    left_side = BoardAndPlayerLabel(app, env.game, ui_state)
+    right_side = ControlsAndLog(app, env.game, ui_state)
     left_side.pack(side=tk.LEFT)
     right_side.pack(side=tk.RIGHT, fill=tk.Y)
 

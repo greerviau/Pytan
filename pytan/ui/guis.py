@@ -3,7 +3,7 @@ from pytan.ui.controls import GameControlsFrame, PlayerLabelFrame, LogFrame, Rep
 from pytan.ui.state import CatanUIState, UIStates
 import tkinter as tk
 
-class LeftSide(tk.Frame):
+class BoardAndPlayerLabel(tk.Frame):
     def __init__(self, master, game, ui_state):
         tk.Frame.__init__(self, master)
 
@@ -14,7 +14,7 @@ class LeftSide(tk.Frame):
 
         board_frame.redraw()
 
-class RightSide(tk.Frame):
+class ControlsAndLog(tk.Frame):
     def __init__(self, master, game, ui_state):
         tk.Frame.__init__(self, master)
 
