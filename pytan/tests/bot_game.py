@@ -19,6 +19,11 @@ if __name__ == '__main__':
     env = CatanEnv(players)
     ui_state = CatanUIState(env.game)
 
+    app = tk.Tk()
+    left_side = BoardAndPlayerLabel(app, env.game, ui_state)
+    right_side = ControlsAndLog(app, env.game, ui_state)
+    left_side.pack(side=tk.LEFT)
+    right_side.pack(side=tk.RIGHT, fill=tk.Y)
     
     def bot_loop():
         while True:
@@ -27,15 +32,7 @@ if __name__ == '__main__':
             if agent.bot:
                 action = agent.choose_action(env.legal_actions, env.game.get_state())
                 env.step(action)
-            time.sleep(0.5)
-        
-    app = tk.Tk()
-    left_side = BoardAndPlayerLabel(app, env.game, ui_state)
-    right_side = ControlsAndLog(app, env.game, ui_state)
-    left_side.pack(side=tk.LEFT)
-    right_side.pack(side=tk.RIGHT, fill=tk.Y)
-
-    bot_thread = threading.Thread(target=bot_loop, daemon=True)
-    bot_thread.start()
+            app.after(500, bot_loop)
+    bot_loop()
 
     app.mainloop()
