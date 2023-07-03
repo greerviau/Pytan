@@ -22,12 +22,12 @@ pip install -e .
 -s  : Simulate {n} (n games)        | eg -s 10
 -r  : Replay {file} (.catan format) | eg -r test_log.catan
 ```
-#### CLI Example
-Simulate 100 games between a 4 bot agents, 3 random and 2 greedy
+#### CLI Examples
+Simulate 100 games between a 4 bot agents, 3 random and 1 greedy
 ```
 pytan -b random -b random -b random -b greedy -s 100
 ```
-Play a game of 1 human against 3 greedy agents
+Play a game with 1 human against 3 greedy agents
 ```
 pytan -hp Bill -b greedy -b greedy -b greedy
 ```
@@ -96,6 +96,25 @@ catan.play_year_plenty(RC.WOOD, RC.BRICK)
 catan.play_road_builder()
 ...
 catan.end_game(log=True)
+```
+
+### GYM Agents
+```python
+players = [
+    RandomAgent(Player('Random1', 0, 'red')),
+    RandomAgent(Player('Random2', 1, 'blue')),
+    RandomAgent(Player('Random3', 2, 'white')),
+    GreedyAgent(Player('Greedy', 3, 'orange'))
+]
+
+env = CatanEnv(players)
+
+while True:
+    current_player_id = env.game.current_player.id
+    agent = env.agents[current_player_id]
+    if agent.bot:
+        action = agent.choose_action(env.legal_actions, env.game.get_state())
+        env.step(action)
 ```
 
 ### UI
