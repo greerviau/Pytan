@@ -12,7 +12,6 @@ class ReplayControl(tk.Frame):
         tk.Frame.__init__(self, master)
         self.master = master
         self.replay = replay
-        self.replay.start()
 
         self.playing = False
         self.delay = 1
@@ -849,15 +848,15 @@ class TradingFrame(tk.LabelFrame):
         non_zero_give = [g for g in give if g != 0]
         non_zero_want = [w for w in want if w != 0]
         if len(non_zero_give) == 1 and len(non_zero_want) == 1:
-            if non_zero_give[0] == 4 and non_zero_want[0] == 1:
+            if non_zero_give[0] / 4 == non_zero_want[0]:
                 self.set_bank()
                 return
             port = PortTypes(order[give.index(non_zero_give[0])])
-            if non_zero_give[0] == 2 and non_zero_want[0] == 1:
+            if non_zero_give[0] / 2 == non_zero_want[0]:
                 if self.game.board.is_player_on_port(self.game.current_player.id, port):
                     self.set_bank()
                     return
-            if non_zero_give[0] == 3 and non_zero_want[0] == 1:
+            if non_zero_give[0] / 3 == non_zero_want[0]:
                 if self.game.board.is_player_on_port(self.game.current_player.id, PortTypes.ANY):
                     self.set_bank()
                     return

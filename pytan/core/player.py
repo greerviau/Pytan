@@ -72,7 +72,7 @@ class Player(object):
 
     @property
     def roads_left(self) -> int:
-        return 12 - self._roads
+        return 15 - self._roads
 
     @property
     def settlements(self) -> int:

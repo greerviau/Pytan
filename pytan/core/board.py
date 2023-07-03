@@ -261,32 +261,26 @@ class Board(hexmesh.HexMesh):
         return [coord for coord, road in self.edge_neighboring_edges(road_coord).items() if type(road) == Piece and road.owner_id == player_id]
 
     def find_longest_road_chain(self, player_id: int) -> int:
-        roads = list(self.friendly_roads(player_id).keys())
-        longest_chain = 0
+        try:
+            starting_road = list(self.friendly_roads(player_id).keys())[0]
+        except IndexError:
+            return 0
         explored = set()
-        while roads:
-            chain_length = [1]
-            self._explore_road(roads[0], player_id, explored, chain_length)
-            if chain_length[0] > longest_chain:
-                longest_chain = chain_length[0]
-            roads = [r for r in roads if r not in explored]
-        return longest_chain
+        explored.add(starting_road)
+        chain_length = self._explore_road(starting_road, player_id, explored)
+        return 1 + chain_length
 
-    def _explore_road(self, road_coord: int, player_id: int, explored: set, chain_length: list[int], parent_neighbors=[]):
-        explored.add(road_coord)
+    def _explore_road(self, road_coord: int, player_id: int, explored: set):
         neighbors = self._neighboring_friendly_roads(road_coord, player_id)
-        if chain_length[0] == 1:
-            parent_neighbors = neighbors.copy()
-        elif chain_length[0] == 2 and [n for n in parent_neighbors if n not in neighbors and road_coord != n]:
-            chain_length[0] += 1
-        else:
-            parent_neighbors = []
-        neighbors = [n for n in neighbors if n not in explored]
-        explored.update(neighbors)
-        if neighbors:
-            chain_length[0] += 1
-            for neighbor in neighbors:
-                self._explore_road(neighbor, player_id, explored, chain_length, parent_neighbors=parent_neighbors)    
+        unexplored_neighbors = list(set(neighbors) - explored)
+        for neighbor in unexplored_neighbors:
+            explored.add(neighbor)
+        chain = 0
+        if any(unexplored_neighbors):
+            chain += 1
+        for neighbor in unexplored_neighbors:
+                chain += self._explore_road(neighbor, player_id, explored)
+        return chain
 
     def get_state(self) -> dict:
         return {

@@ -29,6 +29,11 @@ class Game(object):
         self._stored_states = []
         self._state_idx = -1
 
+        self._starting_player_idx = -1
+        self._current_player_idx = -1
+
+        self.POINTS_TO_WIN = 10
+
         self._observers = set()
         self._notify_observers = True
 
@@ -45,15 +50,8 @@ class Game(object):
             self.add_player(Player('P4', 3, 'orange'))
         player_ids = set([p.id for p in self._players])
         assert len(player_ids) == len(self._players)
-
-        if len(players) == 2:
-            self.POINTS_TO_WIN = 15
-        else:
-            self.POINTS_TO_WIN = 10
         
         self.set_starting_player(self._prng.randint(0,len(self._players)-1))
-
-        self.shuffle_dev_cards()
     
     @property
     def logger(self) -> Logger:
@@ -86,14 +84,6 @@ class Game(object):
     @property
     def current_state(self) -> GameStates:
         return self._game_state.state
-
-    @property
-    def last_state(self) -> dict:
-        return self._last_state
-    
-    @property
-    def next_state(self) -> dict:
-        return self._next_state
     
     @property
     def resource_card_counts(self) -> dict[ResourceCards, int]:
@@ -242,9 +232,9 @@ class Game(object):
         self._state_idx = -1
 
         if randomize:
-            self.set_seed(random.random(), log=False)
+            self.set_seed(random.random())
         else:
-            self.set_seed(self._seed, log=False)
+            self.set_seed(self._seed)
 
         self._board.set_seed(self._seed)
         self._board.reset()
@@ -313,6 +303,11 @@ class Game(object):
     
     def start_game(self, randomize: bool = False):
         self.reset(randomize)
+
+        if len(self._players) == 2:
+            self.POINTS_TO_WIN = 15
+        else:
+            self.POINTS_TO_WIN = 10
 
         self._logger.log('=== CATAN ===\n')
         self._logger.log(f'Game Started: {self._logger.start}')
@@ -585,7 +580,7 @@ class Game(object):
             self._logger.log_action('buy_dev_card', dev_card)         
             self.notify()
 
-    def move_robber(self, tile_coord: int, auto_steal: bool = False):
+    def move_robber(self, tile_coord: int):
         if self._game_state.is_moving_robber(log=True):
             if tile_coord != self.board.robber.coord:
                 self._board.move_robber(tile_coord)
@@ -595,8 +590,6 @@ class Game(object):
                 if len(player_ids) == 1:
                     self._game_state.set_state(GameStates.STEALING)
                     self._players_to_steal_from = player_ids
-                    if auto_steal:
-                        self._steal(player_ids[0])
                 elif player_ids:
                     self._game_state.set_state(GameStates.STEALING)
                     self._logger.log(f'{self.current_turn_player} is stealing')

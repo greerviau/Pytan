@@ -168,24 +168,25 @@ class BoardFrame(tk.Frame):
         self._draw_piece(robber.coord, robber, terrain_centers)
 
     def _draw_piece_shadows(self, piece_type, terrain_centers):
-        cp = self.game.current_player
-        piece = Piece(0x00, cp.id, cp.name, cp.color, piece_type)
-        if piece_type == PieceTypes.ROAD:
-            edges = self.game.legal_road_placements()
-            for edge in edges:
-                self._draw_piece(edge, piece, terrain_centers, ghost=True)
-        elif piece_type == PieceTypes.SETTLEMENT:
-            nodes = self.game.legal_settlement_placements()
-            for node in nodes:
-                self._draw_piece(node, piece, terrain_centers, ghost=True)
-        elif piece_type == PieceTypes.CITY:
-            nodes = self.game.legal_city_placements()
-            for node in nodes:
-                self._draw_piece(node, piece, terrain_centers, ghost=True)
-        elif piece_type == PieceTypes.ROBBER:
-            tiles = self.game.board.legal_robber_placements()
-            for coord in tiles:
-                self._draw_piece(coord, piece, terrain_centers, ghost=True)
+        if self._interact:
+            cp = self.game.current_player
+            piece = Piece(0x00, cp.id, cp.name, cp.color, piece_type)
+            if piece_type == PieceTypes.ROAD:
+                edges = self.game.legal_road_placements()
+                for edge in edges:
+                    self._draw_piece(edge, piece, terrain_centers, ghost=True)
+            elif piece_type == PieceTypes.SETTLEMENT:
+                nodes = self.game.legal_settlement_placements()
+                for node in nodes:
+                    self._draw_piece(node, piece, terrain_centers, ghost=True)
+            elif piece_type == PieceTypes.CITY:
+                nodes = self.game.legal_city_placements()
+                for node in nodes:
+                    self._draw_piece(node, piece, terrain_centers, ghost=True)
+            elif piece_type == PieceTypes.ROBBER:
+                tiles = self.game.board.legal_robber_placements()
+                for coord in tiles:
+                    self._draw_piece(coord, piece, terrain_centers, ghost=True)
 
     def _draw_piece(self, coord, piece, terrain_centers, ghost=False):
         x, y, angle = self._get_piece_center(coord, piece, terrain_centers)

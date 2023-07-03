@@ -31,13 +31,23 @@ LOG_CODES = {
 }
 
 class Logger(object):
-    def __init__(self, log_path: str = './game_logs/', console_log: bool = False, raw_log: bool = True):
-        self.console_log = console_log
-        self.raw_log = raw_log
-
+    def __init__(self, log_file = None, log_path: str = './game_logs/', console_log: bool = False, raw_log: bool = True):
         self.reset()
 
         self._log_path = log_path
+
+        if not log_file:
+            self.log_file = f'{str(self._start).replace(" ", "-")}.catan'
+        else:
+            self.log_file = log_file
+
+        if not os.path.exists(self._log_path):
+            os.makedirs(self._log_path)
+
+        self.log_file_path = os.path.join(self._log_path, self.log_file)
+
+        self.console_log = console_log
+        self.raw_log = raw_log
 
     def reset(self):
         self._all_logs = []
@@ -92,32 +102,16 @@ class Logger(object):
     def raw_dump(self):
         return '\n'.join(self._raw_logs)
 
-    def save_raw_log_file(self, filename: str = ''):
-        if not filename:
-            filename = f'{self._start}.catan'
-            filename = filename.replace(' ', '-')
-        if not os.path.exists(self._log_path):
-            os.makedirs(self._log_path)
-
-        log_filename = os.path.join(self._log_path, filename)
-        log_file = open(log_filename, 'w')
-
-        log_file.write(self.raw_dump())
+    def save_raw_log_file(self):
+        self._save_log(self.raw_dump())
         
-        log_file.close()
-        log_file = None
-        
-    def save_log_file(self, filename: str = ''):
-        if not filename:
-            filename = f'{self._start}.log'
-            filename = filename.replace(' ', '-')
-        if not os.path.exists(self._log_path):
-            os.makedirs(self._log_path)
+    def save_log_file(self):
+        self._save_log(self.log_dump())
 
-        log_filename = os.path.join(self._log_path, filename)
-        log_file = open(log_filename, 'w')
+    def _save_log(self, logs: list[str]):
+        log_file = open(self.log_file_path, 'w')
 
-        log_file.write(self.log_dump())
+        log_file.write(logs)
         
         log_file.close()
         log_file = None
