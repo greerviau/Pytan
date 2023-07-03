@@ -6,7 +6,39 @@ A Python implementation of Settlers of Catan
 pip install git+https://github.com/greerviau/Pytan.git
 ```
 
+If developing use
+
+```
+git clone https://github.com/greerviau/Pytan.git && cd Pytan
+pip install -e .
+```
+
 ## Usage
+### CLI
+#### Arguments
+```
+-hp : Human Player {name}           | eg. -hp Bill
+-b  : Bot {agent} (random, greedy)  | eg -b greedy
+-s  : Simulate {n} (n games)        | eg -s 10
+-r  : Replay {file} (.catan format) | eg -r test_log.catan
+```
+#### CLI Example
+Simulate 100 games between a 4 bot agents, 3 random and 2 greedy
+```
+pytan -b random -b random -b random -b greedy -s 100
+```
+Play a game of 1 human against 3 greedy agents
+```
+pytan -hp Bill -b greedy -b greedy -b greedy
+```
+Play a bot only game with 2 greedy agents and replay it 
+```
+pytan -b greedy -b greedy
+```
+Replay a specific log file
+```
+pytan -r test_log.catan
+```
 ### Core Game
 ```python
 from pytan.core.game import Game
@@ -113,8 +145,7 @@ if __name__ == '__main__':
 - [x] Complete GUI
 - [x] Build Replay System
 - [ ] Build GYM Environment for RL
-- [ ] Fix replay (currently broken)
-  - Bug is somewhere in the game state restore
+- [x] Fix replay (currently broken)
 ## References
 Shoutout to [rosshamish](https://github.com/rosshamish) for building some very usefull Catan projects that I referenced to help build this project. None of these were utilized directly because some features were out of date (and I wanted to build it myself anyway), but they were super helpful in understanding some of the underlying logic in building Catan.
 
