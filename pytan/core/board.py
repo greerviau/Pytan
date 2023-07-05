@@ -297,7 +297,6 @@ class Board(hexmesh.HexMesh):
         neighbors = self._neighboring_friendly_roads(road_coord, player_id)
         unexplored_neighbors = list(set(neighbors) - explored)
         if any(unexplored_neighbors):
-        return chain
             explored_copy = explored.copy()
             explored_copy.update(unexplored_neighbors)
             chain_length += 1
