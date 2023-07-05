@@ -7,7 +7,7 @@ from pytan.core.cards import ResourceCards
 from pytan.core.state import GameStates
 from pytan.core.ports import PortTypes
 from pytan.log.logging import Logger
-from pytan.gym.agents import Agent, RandomAgent, GreedyAgent
+from pytan.ai.agents import Agent
 
 class CatanEnv(gym.Env):
     def __init__(self, agents: list[Agent], logger = None, verbose = False, manual = False):

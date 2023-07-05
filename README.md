@@ -98,8 +98,12 @@ catan.play_road_builder()
 catan.end_game(log=True)
 ```
 
-### GYM Environment
+### Bot Environment
 ```python
+from pytan.core.player import Player
+from pytan.ai.agents import RandomAgent, GreedyAgent
+from pytan.ai.env CatanEnv
+
 players = [
     RandomAgent(Player('Random1', 0, 'red')),
     RandomAgent(Player('Random2', 1, 'blue')),

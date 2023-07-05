@@ -88,11 +88,11 @@ class Board(hexmesh.HexMesh):
 
     @property
     def settlements(self) -> dict[int, Piece]:
-        return {coord: node for coord, node in self._nodes.items() if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT}
+        return {coord: node for coord, node in self._nodes.items() if isinstance(node, Piece) and node.piece_type == PieceTypes.SETTLEMENT}
 
     @property
     def cities(self) -> dict[int, Piece]:
-        return {coord: node for coord, node in self._nodes.items() if type(node) == Piece and node.piece_type == PieceTypes.CITY}
+        return {coord: node for coord, node in self._nodes.items() if isinstance(node, Piece) and node.piece_type == PieceTypes.CITY}
 
     @property
     def ports(self) -> dict[int, Port]:
@@ -114,7 +114,7 @@ class Board(hexmesh.HexMesh):
     def is_player_on_tile(self, tile_coord: int, player_id: int) -> bool:
         for node_coord in self.tile_neighboring_nodes(tile_coord):
             node = self._nodes[node_coord]
-            if type(node) == Piece:
+            if isinstance(node, Piece):
                 if player_id == node.owner_id:
                     return True
         return False
@@ -132,7 +132,7 @@ class Board(hexmesh.HexMesh):
         player_ids = set()
         for node_coord in self.tile_neighboring_nodes(tile_coord):
             node = self._nodes[node_coord]
-            if type(node) == Piece:
+            if isinstance(node, Piece):
                 player_ids.add(node.owner_id)
         return list(player_ids)
 
@@ -140,7 +140,7 @@ class Board(hexmesh.HexMesh):
         settlements = {}
         for node_coord in self.tile_neighboring_nodes(tile_coord):
             node = self._nodes[node_coord]
-            if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT:
+            if isinstance(node, Piece) and node.piece_type == PieceTypes.SETTLEMENT:
                 settlements[node_coord] = node
         return settlements
     
@@ -148,7 +148,7 @@ class Board(hexmesh.HexMesh):
         cities = {}
         for node_coord in self.tile_neighboring_nodes(tile_coord):
             node = self._nodes[node_coord]
-            if type(node) == Piece and node.piece_type == PieceTypes.CITY:
+            if isinstance(node, Piece) and node.piece_type == PieceTypes.CITY:
                 cities[node_coord] = node
         return cities
     
@@ -156,10 +156,10 @@ class Board(hexmesh.HexMesh):
         return {coord: edge for coord, edge in self.occupied_edges.items() if type(edge) == Piece and edge.owner_id == player_id}
 
     def friendly_settlements(self, player_id: int) -> dict[int, Piece]:
-        return {coord: node for coord, node in self.occupied_nodes.items() if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT and node.owner_id == player_id}
+        return {coord: node for coord, node in self.occupied_nodes.items() if isinstance(node, Piece) and node.piece_type == PieceTypes.SETTLEMENT and node.owner_id == player_id}
  
     def friendly_cities(self, player_id: int) -> dict[int, Piece]:
-        return {coord: node for coord, node in self.occupied_nodes.items() if type(node) == Piece and node.piece_type == PieceTypes.CITY and node.owner_id == player_id}
+        return {coord: node for coord, node in self.occupied_nodes.items() if isinstance(node, Piece) and node.piece_type == PieceTypes.CITY and node.owner_id == player_id}
 
     def friendly_pieces(self, player_id: int) -> list[Piece]:
         pieces = []
@@ -174,14 +174,14 @@ class Board(hexmesh.HexMesh):
     def settlement_neighboring_settlement(self, node_coord: int) -> bool:
         neighbor_nodes = self.node_neighboring_nodes(node_coord)
         for coord, node in neighbor_nodes.items():
-            if type(node) == Piece:
+            if isinstance(node, Piece):
                 return True
         return False
             
     def settlement_neighboring_friendly_road(self, node_coord: int, player_id: int) -> bool:
         neighbor_edges = self.node_neighboring_edges(node_coord)
-        for coord, edge in neighbor_edges.items():
-            if type(edge) == Piece and edge.owner_id == player_id:
+        for edge in neighbor_edges.values():
+            if isinstance(edge, Piece) and edge.owner_id == player_id:
                 return True
         return False
 
@@ -189,15 +189,37 @@ class Board(hexmesh.HexMesh):
         neighbor_nodes = self.edge_neighboring_nodes(edge_coord)
         neighbor_edges = self.edge_neighboring_edges(edge_coord)
         for node, edge in zip(neighbor_nodes.values(), neighbor_edges.values()):
-            if (type(node) == Piece and node.owner_id == player_id) or (type(edge) == Piece and edge.owner_id == player_id):
+            if (isinstance(node, Piece) and node.owner_id == player_id) or (isinstance(edge, Piece) and edge.owner_id == player_id):
                 return True
         return False
 
     def road_neighboring_enemy_settlement(self, edge_coord: int, player_id: int) -> bool:
         for node in self.edge_neighboring_nodes(edge_coord).values():
-            if type(node) == Piece and node.owner_id != player_id:
+            if isinstance(node, Piece) and node.owner_id != player_id:
                 return True
         return False
+    
+    def open_ended_roads(self, player_id: int) -> list[int]:
+        roads = self.friendly_roads(player_id)
+        def is_open(edge_coord: int) -> bool:
+            d1, d2 = hexmesh.hex_digits(edge_coord)
+            if d1 % 2 == 0 and d2 % 2 == 0:
+                if edge_coord + hexmesh.EE_DIRS['SE'] not in roads and edge_coord + hexmesh.EE_DIRS['SW']not in roads:
+                    return True
+                elif edge_coord + hexmesh.EE_DIRS['NE'] not in roads and edge_coord + hexmesh.EE_DIRS['NW']not in roads:
+                    return True
+            elif d1 % 2 == 0:
+                if edge_coord + hexmesh.EE_DIRS['NE'] not in roads and edge_coord + hexmesh.EE_DIRS['E']not in roads:
+                    return True
+                elif edge_coord + hexmesh.EE_DIRS['SW'] not in roads and edge_coord + hexmesh.EE_DIRS['W']not in roads:
+                    return True
+            else:
+                if edge_coord + hexmesh.EE_DIRS['E'] not in roads and edge_coord + hexmesh.EE_DIRS['SE']not in roads:
+                    return True
+                elif edge_coord + hexmesh.EE_DIRS['W'] not in roads and edge_coord + hexmesh.EE_DIRS['NW']not in roads:
+                    return True
+            return False
+        return [road for road in roads if is_open(road)]
 
     def legal_road_placements(self, player_id: int) -> list[int]:
         legal_road_placements = []
@@ -210,7 +232,7 @@ class Board(hexmesh.HexMesh):
             else:
                 edges = self.node_neighboring_edges(piece.coord)
             for coord, edge in edges.items():
-                if edge == None:
+                if edge is None:
                     legal_road_placements.append(coord)
         return legal_road_placements
 
@@ -231,7 +253,7 @@ class Board(hexmesh.HexMesh):
     def legal_city_placements(self, player_id: int) -> list[int]:
         legal_city_placements = []
         for coord, node in self.occupied_nodes.items():
-            if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT and node.owner_id == player_id:
+            if isinstance(node, Piece) and node.piece_type == PieceTypes.SETTLEMENT and node.owner_id == player_id:
                 legal_city_placements.append(coord)
         return legal_city_placements
 
@@ -251,7 +273,7 @@ class Board(hexmesh.HexMesh):
     
     def build_city(self, node_coord: int, player: Player) -> bool:
         node = self._nodes[node_coord]
-        if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT:
+        if isinstance(node, Piece) and node.piece_type == PieceTypes.SETTLEMENT:
             if node.owner_id == player.id:
                 self._nodes[node_coord] = place_piece(node_coord, player.id, player.name, player.color, PieceTypes.CITY)
                 return True
@@ -261,26 +283,26 @@ class Board(hexmesh.HexMesh):
         return [coord for coord, road in self.edge_neighboring_edges(road_coord).items() if type(road) == Piece and road.owner_id == player_id]
 
     def find_longest_road_chain(self, player_id: int) -> int:
-        try:
-            starting_road = list(self.friendly_roads(player_id).keys())[0]
-        except IndexError:
+        roads = self.open_ended_roads(player_id)
+        if not any(roads):
             return 0
-        explored = set()
-        explored.add(starting_road)
-        chain_length = self._explore_road(starting_road, player_id, explored)
-        return 1 + chain_length
+        chains = []
+        for road in roads:
+            explored = set()
+            explored.add(road)
+            chains.append(self._explore_road(road, player_id, explored, 1))
+        return max(chains)
 
-    def _explore_road(self, road_coord: int, player_id: int, explored: set):
+    def _explore_road(self, road_coord: int, player_id: int, explored: set, chain_length: int):
         neighbors = self._neighboring_friendly_roads(road_coord, player_id)
         unexplored_neighbors = list(set(neighbors) - explored)
-        for neighbor in unexplored_neighbors:
-            explored.add(neighbor)
-        chain = 0
         if any(unexplored_neighbors):
-            chain += 1
-        for neighbor in unexplored_neighbors:
-                chain += self._explore_road(neighbor, player_id, explored)
         return chain
+            explored_copy = explored.copy()
+            explored_copy.update(unexplored_neighbors)
+            chain_length += 1
+            chain_length = max([self._explore_road(neighbor, player_id, explored_copy, chain_length) for neighbor in unexplored_neighbors])
+        return chain_length
 
     def get_state(self) -> dict:
         return {
@@ -329,14 +351,14 @@ class Board(hexmesh.HexMesh):
                 player_roads[o_id].append(edge)
 
         for node in self._nodes.values():
-            if type(node) == Piece and node.piece_type == PieceTypes.SETTLEMENT:
+            if isinstance(node, Piece) and node.piece_type == PieceTypes.SETTLEMENT:
                 o_id = node.owner_id
                 if o_id not in player_settlements:
                     player_settlements[o_id] = []
                 player_settlements[o_id].append(node)
 
         for node in self._nodes.values():
-            if type(node) == Piece and node.piece_type == PieceTypes.CITY:
+            if isinstance(node, Piece) and node.piece_type == PieceTypes.CITY:
                 o_id = node.owner_id
                 if o_id not in player_settlements:
                     player_cities[o_id] = []

@@ -1,42 +1,8 @@
 import random
-from pytan.core.state import GameStates
+import pytan
 from pytan.core.player import Player
 from pytan.core.game import Game
-
-class Agent:
-    def __init__(self, bot: bool, player: Player):
-        self.__bot = bot
-        self.__player = player
-
-    @property
-    def bot(self) -> bool:
-        return self.__bot
-
-    @property
-    def player(self) -> Player:
-        return self.__player
-
-    @property
-    def player_id(self) -> int:
-        return self.__player.id
-
-class Human(Agent):
-    def __init__(self, player: Player):
-        super().__init__(False, player)
-
-class BotAgent(Agent):
-    def __init__(self, player: Player):
-        super().__init__(True, player)
-
-class RandomAgent(BotAgent):
-    def __init__(self, player: Player):
-        super().__init__(player)
-
-    def choose_action(self, env: 'CatanEnv'):
-        actions = env.legal_actions
-        if len(actions) == 0:
-            raise RuntimeError('No actions')
-        return random.choice(actions)
+from . import BotAgent
 
 class GreedyAgent(BotAgent):
     def __init__(self, player: Player):
@@ -66,9 +32,8 @@ class GreedyAgent(BotAgent):
         return action
 
     def score_state(self):
-        curr_player = self.game.current_player if self.game.state != GameStates.STARTING_SETTLEMENT else self.game.players[self.game.current_player_idx-1]
+        curr_player = self.game.get_player_by_id(self.player.id)
         score = curr_player.victory_points * 100
-        score = curr_player.longest_road_chain / 15
         score += self.calculate_exploration_score(curr_player.id)
         score += curr_player.longest_road
         score += curr_player.settlements
@@ -123,3 +88,4 @@ class GreedyAgent(BotAgent):
         for neighbor in unexplored_neighbors:
                 score += self.explore_road(neighbor, explored)
         return score 
+        

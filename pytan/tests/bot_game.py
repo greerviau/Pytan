@@ -1,6 +1,6 @@
 import tkinter as tk
-from pytan.gym.environments import CatanEnv
-from pytan.gym.agents import Human, RandomAgent, GreedyAgent
+from pytan.ai.env import CatanEnv
+from pytan.ai.agents import Human, RandomAgent, GreedyAgent
 from pytan.core.player import Player
 from pytan.ui.guis import BoardAndPlayerLabel, ControlsAndLog
 from pytan.ui.state import CatanUIState
