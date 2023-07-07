@@ -1,76 +1,84 @@
+import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.nn import functional as F
+import numpy as np
+from pytan.core.game import Game
 from pytan.core.player import Player
-from .greedyagent import GreedyAgent
+from .greedyagent import BotAgent
 
 class Policy(nn.Module):
-        def __init__(self):
-            super(Policy, self).__init__()
+    def __init__(self):
+        super(Policy, self).__init__()
 
-            self.gamma = 0.99
-            self.eps_clip = 0.1
+        self.gamma = 0.99
+        self.eps_clip = 0.1
 
-            self.layers = nn.Sequential(
-                nn.Linear(6000, 512), nn.ReLU(),
-                nn.Linear(512, 2),
-            )
+        self.model = nn.Sequential(
+            nn.Linear(15, 32),
+            nn.ReLU(),
+            nn.Linear(32, 16),
+            nn.ReLU(),
+            nn.Linear(16, 1)
+        )
 
-        def state_to_tensor(self, I):
-            """ prepro 210x160x3 uint8 frame into 6000 (75x80) 1D float vector. See Karpathy's post: http://karpathy.github.io/2016/05/31/rl/ """
-            if I is None:
-                return torch.zeros(1, 6000)
-            I = I[35:185] # crop - remove 35px from start & 25px from end of image in x, to reduce redundant parts of image (i.e. after ball passes paddle)
-            I = I[::2,::2,0] # downsample by factor of 2.
-            I[I == 144] = 0 # erase background (background type 1)
-            I[I == 109] = 0 # erase background (background type 2)
-            I[I != 0] = 1 # everything else (paddles, ball) just set to 1. this makes the image grayscale effectively
-            return torch.from_numpy(I.astype(np.float32).ravel()).unsqueeze(0)
+    def state_to_tensor(self, I):
+        return torch.from_numpy(I.astype(np.float32).ravel()).unsqueeze(0)
+    
+    def pre_process(self, x, prev_x):
+        return self.state_to_tensor(np.array(x)) - self.state_to_tensor(np.array(prev_x))
 
-        def pre_process(self, x, prev_x):
-            return self.state_to_tensor(x) - self.state_to_tensor(prev_x)
+    def forward(self, d_obs, value=None, advantage=None, deterministic=False):
+        if value is None:
+            with torch.no_grad():
+                logits = self.model(d_obs)
+                value = logits[0].detach().cpu().numpy()
+                return value
+    
+        # PPO
+        ts = torch.FloatTensor(value.cpu().numpy())
 
-        def convert_action(self, action):
-            return action + 2
+        logits = self.model(d_obs)
+        r = torch.sum(F.softmax(logits, dim=1) * ts, dim=1) / value
+        loss1 = r * advantage
+        loss2 = torch.clamp(value, 1-self.eps_clip, 1+self.eps_clip) * advantage
+        loss = -torch.min(loss1, loss2)
+        loss = torch.mean(loss)
 
-        def forward(self, d_obs, action=None, action_prob=None, advantage=None, deterministic=False):
-            if action is None:
-                with torch.no_grad():
-                    logits = self.layers(d_obs)
-                    if deterministic:
-                        action = int(torch.argmax(logits[0]).detach().cpu().numpy())
-                        action_prob = 1.0
-                    else:
-                        c = torch.distributions.Categorical(logits=logits)
-                        action = int(c.sample().cpu().numpy()[0])
-                        action_prob = float(c.probs[0, action].detach().cpu().numpy())
-                    return action, action_prob
+        return loss
                 
-class DNNAgent(GreedyAgent):
+class DNNAgent(BotAgent):
     def __init__(self, player: Player):
         super().__init__(player)
-        self.model = self.StateScoreModel()
+        self.policy = Policy()
 
-    def score_state(self):
-        curr_player = self.game.get_player_by_id(self.player.id)
-        state_vector = []
-        state_vector.append(curr_player.victory_points * 100)
-        state_vector.append(self.game.turn)
-        state_vector.append(self.calculate_exploration_score(curr_player.id))
-        state_vector.append(curr_player.longest_road)
-        state_vector.append(curr_player.settlements)
-        state_vector.append(curr_player.cities)
-        state_vector.append(curr_player.pp_score)
-        state_vector.append(curr_player.diversity_score)
-        state_vector.append(len(curr_player.dev_cards))
-        state_vector.append(curr_player.largest_army)
-        state_vector.append(curr_player.can_buy_city())
-        state_vector.append(curr_player.can_buy_settlement())
-        state_vector.append(curr_player.can_buy_road())
-        state_vector.append(curr_player.can_buy_dev_card())
-        state_vector.append(self.robber_score(curr_player.id))
+    def choose_action(self, env: 'CatanEnv'):
+        actions = env.legal_actions
+        if len(actions) == 0:
+            raise RuntimeError('No actions')
 
-        score = self.forward_pass(state_vector)
+        #print(game.get_state())
+
+        game = Game.create_from_state(env.game.get_state())
+
+        scores = []
+        for function, args in actions:
+            getattr(game, function)(*args)
+            scores.append(self.score_state(env.get_state_vector(game)))
+            game.undo()
+        m = max(scores)
+        c = scores.count(m)
+        if c > 1:
+            i = random.choice([i for i, s in enumerate(scores) if s == m])
+        else:
+            i = scores.index(m)
+        action = actions[i]
+        return action
+
+    def score_state(self, state):
+
+        score = self.forward_pass(state)
 
         return score
     

@@ -1,50 +1,104 @@
 import random
-import numpy as np
-from PIL import Image
+import os
 import torch
 from torch.nn import functional as F
 from torch import nn
+import numpy as np
+from pytan.core.game import Game
 from pytan.core.player import Player
 from pytan.ai.env import CatanEnv
 from pytan.ai.agents import DNNAgent
+from pytan.ai.agents.dnnagent import Policy
+from pytan.log.logging import Logger
 
 agents = [
-    DNNAgent(Player('Net1', 0, 'red')),
-    DNNAgent(Player('Net2', 1, 'blue')),
-    DNNAgent(Player('Net3', 2, 'white')),
-    DNNAgent(Player('Net4', 3, 'orange'))
+    DNNAgent(Player('P1', 0, 'red')),
+    DNNAgent(Player('P2', 1, 'blue')),
+    DNNAgent(Player('P3', 2, 'white')),
+    DNNAgent(Player('P4', 3, 'orange'))
 ]
 
-env = CatanEnv(agents)
-env.reset()
+env = CatanEnv(agents, logger=Logger(log_file=None, console_log=False))
+
+policy = Policy()
 
 opt = torch.optim.Adam(policy.parameters(), lr=1e-3)
 
+ITTERATIONS = 500
+GAMES = 10
+TIMESTEPS = 190000
+
 reward_sum_running_avg = None
-for it in range(100000):
-    d_obs_history, action_history, action_prob_history, reward_history = [], [], [], []
-    for ep in range(10):
-        obs, prev_obs = env.reset(), None
-        for t in range(190000):
-            #env.render()
+first_spot_wins, second_spot_wins, third_spot_wins, fourth_spot_wins = 0,0,0,0
+running_turn_avg = None
+for it in range(ITTERATIONS):
+    d_obs_history, value_history, reward_history, = [], [], []
+    turns = []
+    obs, prev_obs = env.reset(), None
+    games = 0
+    for t in range(TIMESTEPS):
+        #env.render()
+        current_player_id = env.game.current_player.id
+        agent = env.agents[current_player_id]
+        legal_actions = env.legal_actions
+        if len(legal_actions) == 0:
+            print(env.game.state)
+            raise RuntimeError('No actions')
+        
+        game = Game.create_from_state(env.game.get_state())
 
-            d_obs = policy.pre_process(obs, prev_obs)
+        values = []
+        for function, args in legal_actions:
+            getattr(game, function)(*args)
+
+            i_obs = env.get_state_vector(game)
+
+            d_obs = policy.pre_process(i_obs, prev_obs)
+
             with torch.no_grad():
-                action, action_prob = policy(d_obs)
+                action_prob = policy(d_obs)
+                values.append(action_prob)
+                
+            game.undo()
+        final_value = max(values)
+        c = values.count(final_value)
+        if c > 1:
+            action_i = random.choice([i for i, s in enumerate(values) if s == final_value])
+        else:
+            action_i = values.index(final_value)
 
-            prev_obs = obs
-            obs, reward, done, info = env.step(policy.convert_action(action))
+        action = legal_actions[action_i]
 
-            d_obs_history.append(d_obs)
-            action_history.append(action)
-            action_prob_history.append(action_prob)
-            reward_history.append(reward)
+        prev_obs = obs
+        obs, reward, done, info = env.step(action)
 
-            if done:
-                reward_sum = sum(reward_history[-t:])
-                reward_sum_running_avg = 0.99*reward_sum_running_avg + 0.01*reward_sum if reward_sum_running_avg else reward_sum
-                print('Iteration %d, Episode %d (%d timesteps) - last_action: %d, last_action_prob: %.2f, reward_sum: %.2f, running_avg: %.2f' % (it, ep, t, action, action_prob, reward_sum, reward_sum_running_avg))
-                break
+        d_obs_history.append(policy.pre_process(obs, prev_obs))
+        value_history.append(final_value)
+        reward_history.append(reward)
+
+        if done or env.game.turn > 500:
+            games += 1
+            turns.append(env.game.turn)
+            avg_turns = sum(turns) / len(turns)
+
+            reward_sum = sum(reward_history[-t:])
+            reward_sum_running_avg = 0.99*reward_sum_running_avg + 0.01*reward_sum if reward_sum_running_avg else reward_sum
+            print('\rIteration %d, Episode %d (%d timesteps) - reward_sum: %.2f, running_avg: %.2f, avg turns: %d   ' % (it, games, t, reward_sum, reward_sum_running_avg, avg_turns), end='')
+
+            scoreboard = env.game.scoreboard
+            vps = list(scoreboard.values())
+            ind = vps.index(max(vps))
+            if ind == 0:
+                first_spot_wins += 1
+            elif ind == 1:
+                second_spot_wins += 1
+            elif ind == 2:
+                third_spot_wins += 1
+            elif ind == 3:
+                fourth_spot_wins += 1
+            obs, prev_obs = env.reset(), None
+            
+    print()
 
     # compute advantage
     R = 0
@@ -60,19 +114,27 @@ for it in range(100000):
 
     # update policy
     for _ in range(5):
-        n_batch = 24576
-        idxs = random.sample(range(len(action_history)), n_batch)
+        n_batch = len(value_history) // 5
+        idxs = random.sample(range(len(value_history)), n_batch)
         d_obs_batch = torch.cat([d_obs_history[idx] for idx in idxs], 0)
-        action_batch = torch.LongTensor([action_history[idx] for idx in idxs])
-        action_prob_batch = torch.FloatTensor([action_prob_history[idx] for idx in idxs])
+        value_batch = torch.FloatTensor(np.array([value_history[idx] for idx in idxs]))
         advantage_batch = torch.FloatTensor([discounted_rewards[idx] for idx in idxs])
 
         opt.zero_grad()
-        loss = policy(d_obs_batch, action_batch, action_prob_batch, advantage_batch)
+        loss = policy(d_obs_batch, value_batch, advantage_batch)
         loss.backward()
         opt.step()
 
     if it % 5 == 0:
-        torch.save(policy.state_dict(), 'params.ckpt')
-
-env.close()
+        avg_turns = sum(turns) / len(turns)
+        running_turn_avg = (running_turn_avg + avg_turns) // 2 if running_turn_avg else avg_turns
+        os.makedirs('ppo_models', exist_ok=True)
+        torch.save(policy.state_dict(), f'ppo_models/model_itter_{it}.ckpt')
+        print('Model Saved')
+        print('Stats:')
+        print('Average Turns: ', running_turn_avg)
+        print('Starting Place Wins:')
+        print('\tFirst: ', first_spot_wins)
+        print('\tSecond: ', second_spot_wins)
+        print('\tThird: ', third_spot_wins)
+        print('\tFourth: ', fourth_spot_wins)

@@ -1,6 +1,5 @@
 import click
 import tkinter as tk
-import threading
 import time
 import os
 
@@ -88,12 +87,14 @@ def simulate_n_games(env, n_games):
     turns = []
     wins = [0 for i in range(game.n_players)]
     for i in range(n_games):
+        start = time.time()
         simulate_game(env)
+        ttp = time.time() - start
         turns.append(game.turn)
         vp = [player.total_victory_points for player in game.players]
         winner = vp.index(max(vp))
         wins[winner] += 1
-        print(f'\rGame: {i+1} - {vp} - turns: {game.turn}     ',end='')
+        print(f'\rGame: {i+1} - {vp} - turns: {game.turn} - time: {ttp:.2f}   ',end='')
     avg_t = sum(turns)//len(turns)
 
     lapse = round(time.time() - start, 2)

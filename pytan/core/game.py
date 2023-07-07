@@ -26,14 +26,6 @@ class Game(object):
 
         self._game_state = CatanGameState(self)
 
-        self._stored_states = []
-        self._state_idx = -1
-
-        self._starting_player_idx = -1
-        self._current_player_idx = -1
-
-        self.POINTS_TO_WIN = 10
-
         self._observers = set()
         self._notify_observers = True
 
@@ -50,8 +42,8 @@ class Game(object):
             self.add_player(Player('P4', 3, 'orange'))
         player_ids = set([p.id for p in self._players])
         assert len(player_ids) == len(self._players)
-        
-        self.set_starting_player(self._prng.randint(0,len(self._players)-1))
+
+        self.shuffle_players()
     
     @property
     def logger(self) -> Logger:
@@ -170,6 +162,10 @@ class Game(object):
     @property
     def turn(self) -> int:
         return self._turn
+    
+    @property
+    def scoreboard(self) -> dict:
+        return {player.id: player.total_victory_points for player in self._players}
 
     @property
     def state_idx(self) -> int:
@@ -206,6 +202,11 @@ class Game(object):
 
         self._give_trade = []
         self._want_trade = []
+
+        self._stored_states = []
+        self._state_idx = -1
+
+        self.POINTS_TO_WIN = 10
         
         self._current_roll = 0
         self._last_roll = 0
@@ -220,18 +221,20 @@ class Game(object):
 
         self._moves_made = 0
         self._turn = 0
+
+        self._current_player_idx = 0
         
     def reset(self, randomize: bool = False):
         # Reset the game state
         self.init_game_vars()
         self._observers = self._observers.copy()
         self._players = [p.clone_player() for p in self._players]
-        self._current_player_idx = self._starting_player_idx
 
         self._stored_states = []
         self._state_idx = -1
 
         if randomize:
+            self.shuffle_players()
             self.set_seed(random.random())
         else:
             self.set_seed(self._seed)
@@ -239,7 +242,11 @@ class Game(object):
         self._board.set_seed(self._seed)
         self._board.reset()
 
+        self._logger.reset()
+
         self.shuffle_dev_cards()
+
+        self.shuffle_players()
 
         self._game_state.set_state(GameStates.UNDEFINED)
 
@@ -280,10 +287,8 @@ class Game(object):
                 self._dev_cards.append(card)
         self._prng.shuffle(self._dev_cards)
 
-    def set_starting_player(self, player_idx: int):
-        self._logger.log_action('set_starting_player', player_idx)
-        self._starting_player_idx = player_idx
-        self._current_player_idx = self._starting_player_idx
+    def shuffle_players(self):
+        self._prng.shuffle(self._players)
 
     def clear_players(self):
         self._logger.log_action('clear_players')
@@ -316,7 +321,7 @@ class Game(object):
         self._logger.log(f'{self.current_turn_player} starts')
         self._logger.log_action('start_game')
 
-        self.state = GameStates.STARTING_SETTLEMENT
+        self._game_state.set_state(GameStates.STARTING_SETTLEMENT)
         self.notify()
 
     def end_game(self, log: bool = False):

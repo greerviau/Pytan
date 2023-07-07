@@ -120,10 +120,81 @@ class CatanEnv(gym.Env):
         return trades
     
     def reset(self):
-        self.game.reset(randomize=True)
+        self.game.start_game(randomize=True)
+        return self.get_state_vector(self.game)
 
     def step(self, action):
         if self.is_legal(action):
             function, args = action
             getattr(self.game, function)(*args)
+            done = self.game.state == GameStates.GAME_OVER
+        current_player = self.game.current_player
+        if not self.game.has_rolled:
+            current_player = self.game.players[self.game.current_player_idx-1]
+        reward = current_player.total_victory_points
+        return self.get_state_vector(self.game), reward, done, None
+    
+    def unsetep(self):
+        self.game.undo()
+    
+    def get_state_vector(self, game: Game = None):
+        if not game:
+            game = self.game
+        curr_player = game.current_player
+        state_vector = []
+        state_vector.append(curr_player.victory_points)
+        state_vector.append(game.turn)
+        state_vector.append(self.calculate_exploration_score(curr_player.id))
+        state_vector.append(curr_player.longest_road)
+        state_vector.append(curr_player.settlements)
+        state_vector.append(curr_player.cities)
+        state_vector.append(curr_player.pp_score)
+        state_vector.append(curr_player.diversity_score)
+        state_vector.append(len(curr_player.dev_cards))
+        state_vector.append(curr_player.largest_army)
+        state_vector.append(curr_player.can_buy_city())
+        state_vector.append(curr_player.can_buy_settlement())
+        state_vector.append(curr_player.can_buy_road())
+        state_vector.append(curr_player.can_buy_dev_card())
+        state_vector.append(self.robber_score(curr_player.id))
+
+        return state_vector
+    
+    def robber_score(self, player_id):
+        # Robber placement
+        robber = self.game.board.robber.coord
+        tile = self.game.board.tiles[robber]
+        prod = tile.prod_points
+        n_settlements = len(self.game.board.settlements_on_tile(robber))
+        n_cities = len(self.game.board.cities_on_tile(robber))
+        players = set(self.game.board.players_on_tile(robber))
+        vps = sum([self.game.get_player_by_id(p).victory_points for p in players])
+        l = len(players) if len(players) > 0 else 1
+        score = 0
+        if not self.game.board.is_player_on_tile(robber, player_id):
+            score += prod * (n_settlements + (n_cities*2)) * (vps/l)
+        else:
+            score -= 100
+
+        return score
+
+    def calculate_exploration_score(self, player_id: int) -> int:
+        try:
+            starting_road = list(self.game.board.friendly_roads(player_id).keys())[0]
+        except IndexError:
+            return 0
+        explored = set()
+        explored.add(starting_road)
+        score = self.explore_road(starting_road, explored) / 250
+        return score
+
+    def explore_road(self, road_coord: int, explored: set):
+        neighbors = [coord for coord, road in self.game.board.edge_neighboring_edges(road_coord).items() if road == None]
+        unexplored_neighbors = list(set(neighbors) - explored)
+        for neighbor in unexplored_neighbors:
+            explored.add(neighbor)
+        score = sum([t.prod_points for t in self.game.board.edge_neighboring_tiles(road_coord).values()])
+        for neighbor in unexplored_neighbors:
+                score += self.explore_road(neighbor, explored)
+        return score 
         

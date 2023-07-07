@@ -253,7 +253,8 @@ class CatanGameState(object):
         if self.game_has_started():
             if self._state == GameStates.INGAME:
                 if self._game.current_player.can_play_road_builder(self._game.turn):
-                    return True
+                    if len(self._game.legal_road_placements()) >= 2:
+                        return True
                 elif log:
                     self.log(f'{self._game.current_player} has no valid road builder card')
             elif log:
