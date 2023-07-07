@@ -24,8 +24,8 @@ policy = Policy()
 
 opt = torch.optim.Adam(policy.parameters(), lr=1e-3)
 
-ITTERATIONS = 500
-GAMES = 10
+ITTERATIONS = 10000
+GAMES = 100
 TIMESTEPS = 190000
 
 reward_sum_running_avg = None
@@ -34,70 +34,69 @@ running_turn_avg = None
 for it in range(ITTERATIONS):
     d_obs_history, value_history, reward_history, = [], [], []
     turns = []
-    obs, prev_obs = env.reset(), None
-    games = 0
-    for t in range(TIMESTEPS):
-        #env.render()
-        current_player_id = env.game.current_player.id
-        agent = env.agents[current_player_id]
-        legal_actions = env.legal_actions
-        if len(legal_actions) == 0:
-            print(env.game.state)
-            raise RuntimeError('No actions')
-        
-        game = Game.create_from_state(env.game.get_state())
-
-        values = []
-        for function, args in legal_actions:
-            getattr(game, function)(*args)
-
-            i_obs = env.get_state_vector(game)
-
-            d_obs = policy.pre_process(i_obs, prev_obs)
-
-            with torch.no_grad():
-                action_prob = policy(d_obs)
-                values.append(action_prob)
-                
-            game.undo()
-        final_value = max(values)
-        c = values.count(final_value)
-        if c > 1:
-            action_i = random.choice([i for i, s in enumerate(values) if s == final_value])
-        else:
-            action_i = values.index(final_value)
-
-        action = legal_actions[action_i]
-
-        prev_obs = obs
-        obs, reward, done, info = env.step(action)
-
-        d_obs_history.append(policy.pre_process(obs, prev_obs))
-        value_history.append(final_value)
-        reward_history.append(reward)
-
-        if done or env.game.turn > 500:
-            games += 1
-            turns.append(env.game.turn)
-            avg_turns = sum(turns) / len(turns)
-
-            reward_sum = sum(reward_history[-t:])
-            reward_sum_running_avg = 0.99*reward_sum_running_avg + 0.01*reward_sum if reward_sum_running_avg else reward_sum
-            print('\rIteration %d, Episode %d (%d timesteps) - reward_sum: %.2f, running_avg: %.2f, avg turns: %d   ' % (it, games, t, reward_sum, reward_sum_running_avg, avg_turns), end='')
-
-            scoreboard = env.game.scoreboard
-            vps = list(scoreboard.values())
-            ind = vps.index(max(vps))
-            if ind == 0:
-                first_spot_wins += 1
-            elif ind == 1:
-                second_spot_wins += 1
-            elif ind == 2:
-                third_spot_wins += 1
-            elif ind == 3:
-                fourth_spot_wins += 1
-            obs, prev_obs = env.reset(), None
+    for g in range(GAMES):
+        obs, prev_obs = env.reset(), None
+        for t in range(TIMESTEPS):
+            #env.render()
+            current_player_id = env.game.current_player.id
+            agent = env.agents[current_player_id]
+            legal_actions = env.legal_actions
+            if len(legal_actions) == 0:
+                print(env.game.state)
+                raise RuntimeError('No actions')
             
+            game = Game.create_from_state(env.game.get_state())
+
+            values = []
+            for function, args in legal_actions:
+                getattr(game, function)(*args)
+
+                i_obs = env.get_state_vector(game)
+
+                d_obs = policy.pre_process(i_obs, prev_obs)
+
+                with torch.no_grad():
+                    action_prob = policy(d_obs)
+                    values.append(action_prob)
+                    
+                game.undo()
+            final_value = max(values)
+            c = values.count(final_value)
+            if c > 1:
+                action_i = random.choice([i for i, s in enumerate(values) if s == final_value])
+            else:
+                action_i = values.index(final_value)
+
+            action = legal_actions[action_i]
+
+            prev_obs = obs
+            obs, reward, done, info = env.step(action)
+
+            d_obs_history.append(policy.pre_process(obs, prev_obs))
+            value_history.append(final_value)
+            reward_history.append(reward)
+
+            if done or env.game.turn > 500:
+                turns.append(env.game.turn)
+                avg_turns = sum(turns) / len(turns)
+
+                reward_sum = sum(reward_history[-t:])
+                reward_sum_running_avg = 0.99*reward_sum_running_avg + 0.01*reward_sum if reward_sum_running_avg else reward_sum
+                print('\rIteration %d, Game %d (%d timesteps) - reward_sum: %.2f, running_avg: %.2f, avg turns: %d   ' % (it, g, t, reward_sum, reward_sum_running_avg, avg_turns), end='')
+
+                scoreboard = env.game.scoreboard
+                vps = list(scoreboard.values())
+                ind = vps.index(max(vps))
+                if ind == 0:
+                    first_spot_wins += 1
+                elif ind == 1:
+                    second_spot_wins += 1
+                elif ind == 2:
+                    third_spot_wins += 1
+                elif ind == 3:
+                    fourth_spot_wins += 1
+                break
+                
     print()
 
     # compute advantage
@@ -114,8 +113,11 @@ for it in range(ITTERATIONS):
 
     # update policy
     for _ in range(5):
-        n_batch = len(value_history) // 5
-        idxs = random.sample(range(len(value_history)), n_batch)
+        n_batch = 24576
+        try:
+            idxs = random.sample(range(len(value_history)), n_batch)
+        except:
+            idxs = range(len(value_history))
         d_obs_batch = torch.cat([d_obs_history[idx] for idx in idxs], 0)
         value_batch = torch.FloatTensor(np.array([value_history[idx] for idx in idxs]))
         advantage_batch = torch.FloatTensor([discounted_rewards[idx] for idx in idxs])
