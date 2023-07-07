@@ -127,7 +127,7 @@ for it in range(ITTERATIONS):
 
     if it % 5 == 0:
         avg_turns = sum(turns) / len(turns)
-        running_turn_avg = (running_turn_avg + avg_turns) // 2 if running_turn_avg else avg_turns
+        running_turn_avg = 0.99*running_turn_avg + 0.01*avg_turns if running_turn_avg else avg_turns
         os.makedirs('ppo_models', exist_ok=True)
         torch.save(policy.state_dict(), f'ppo_models/model_itter_{it}.ckpt')
         print('Model Saved')
