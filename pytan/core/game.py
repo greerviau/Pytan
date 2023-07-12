@@ -31,7 +31,7 @@ class Game(object):
 
         self._board = Board(seed=seed)
 
-        self.clear_players()
+        self._players = []
         if players:
             for player in players:
                 self.add_player(player)
@@ -41,9 +41,8 @@ class Game(object):
             self.add_player(Player('P3', 2, 'white'))
             self.add_player(Player('P4', 3, 'orange'))
         player_ids = set([p.id for p in self._players])
+        self._player_order = range(len(self._players))
         assert len(player_ids) == len(self._players)
-
-        self.shuffle_players()
     
     @property
     def logger(self) -> Logger:
@@ -138,6 +137,10 @@ class Game(object):
     @property
     def has_rolled(self) -> bool:
         return self._has_rolled
+    
+    @property
+    def is_over(self) -> bool:
+        return self._game_state == GameStates.GAME_OVER
 
     @property
     def knight_played_this_turn(self) -> bool:
@@ -165,7 +168,8 @@ class Game(object):
     
     @property
     def scoreboard(self) -> dict:
-        return {player.id: player.total_victory_points for player in self._players}
+        player_temp = self._players[self._starting_player_idx:]+self._players[:self._starting_player_idx]
+        return {player.id: player.total_victory_points for player in player_temp}
 
     @property
     def state_idx(self) -> int:
@@ -177,11 +181,11 @@ class Game(object):
 
     @property
     def can_undo(self) -> bool:
-        return self._state_idx > 0
+        return self._state_idx > 0 and len(self._stored_states) > 0
 
     @property
     def can_redo(self) -> bool:
-        return self._state_idx < len(self._stored_states) - 1
+        return self._state_idx > -1 and self._state_idx < len(self._stored_states) - 1
 
     @state.setter
     def state(self, s: GameStates):
@@ -223,30 +227,31 @@ class Game(object):
         self._turn = 0
 
         self._current_player_idx = 0
+        self._starting_player_idx = 0
         
     def reset(self, randomize: bool = False):
         # Reset the game state
         self.init_game_vars()
-        self._observers = self._observers.copy()
-        self._players = [p.clone_player() for p in self._players]
 
-        self._stored_states = []
-        self._state_idx = -1
+        self._logger.reset()
+
+        self._observers = self._observers.copy()
 
         if randomize:
-            self.shuffle_players()
             self.set_seed(random.random())
         else:
             self.set_seed(self._seed)
 
+        players_temp = [p.clone_player() for p in self._players]
+        self.clear_players()
+        for player in players_temp:
+            self.add_player(player)
+        self.set_starting_player(self._prng.randint(0,len(self._players)-1))
+
         self._board.set_seed(self._seed)
         self._board.reset()
 
-        self._logger.reset()
-
         self.shuffle_dev_cards()
-
-        self.shuffle_players()
 
         self._game_state.set_state(GameStates.UNDEFINED)
 
@@ -287,8 +292,10 @@ class Game(object):
                 self._dev_cards.append(card)
         self._prng.shuffle(self._dev_cards)
 
-    def shuffle_players(self):
-        self._prng.shuffle(self._players)
+    def set_starting_player(self, player_idx: int):
+        self._logger.log_action('set_starting_player', player_idx)
+        self._starting_player_idx = player_idx
+        self._current_player_idx = self._starting_player_idx
 
     def clear_players(self):
         self._logger.log_action('clear_players')
@@ -432,6 +439,7 @@ class Game(object):
             self.notify()
 
     def _pass_turn(self):
+        self._logger.log(f'{self.current_turn_player} passed their turn')
         self._has_rolled = False
         self._knight_played_this_turn = False
         self._turn += 1
@@ -499,8 +507,8 @@ class Game(object):
                     self._add_resources(ROAD_COST)
                 else:
                     self._free_roads -= 1
-                if self._free_roads == 0:
-                    self._game_state.set_state(GameStates.INGAME)       
+                    if self._free_roads == 0:
+                        self._game_state.set_state(GameStates.INGAME)       
                 self.notify()
 
     def can_build_settlement(self, node_coord: int) -> bool:
@@ -866,17 +874,21 @@ class Game(object):
         return game
     
     def undo(self, update:bool = True):
-        if len(self._stored_states) > 0 and self._state_idx > -1:
+        if self.can_undo:
             self._state_idx -= 1
             self.restore(self._stored_states[self._state_idx])
             self.notify(new=False, update=update)
+            return True
         else:
             print('Cant undo')
+            return False
     
     def redo(self, update: bool = True):
-        if self._state_idx < len(self._stored_states)-1:
+        if self.can_redo:
             self._state_idx += 1
             self.restore(self._stored_states[self._state_idx])
             self.notify(new=False, update=update)
+            return True
         else:
             print('Cant redo')
+            return False

@@ -37,7 +37,7 @@ class Logger(object):
         self._log_path = log_path
 
         if not log_file:
-            self.log_file = f'{str(self._start).replace(" ", "-")}.catan'
+            self.log_file = f'{str(self._start).replace(" ", "_").replace("-", "_").replace(":", "_").replace(".", "_")}.catan'
         else:
             self.log_file = log_file
 

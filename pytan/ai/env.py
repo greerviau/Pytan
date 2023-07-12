@@ -127,37 +127,40 @@ class CatanEnv(gym.Env):
         if self.is_legal(action):
             function, args = action
             getattr(self.game, function)(*args)
-            done = self.game.state == GameStates.GAME_OVER
+        done = self.game.state == GameStates.GAME_OVER
         current_player = self.game.current_player
         if not self.game.has_rolled:
             current_player = self.game.players[self.game.current_player_idx-1]
         reward = current_player.total_victory_points
         return self.get_state_vector(self.game), reward, done, None
     
-    def unsetep(self):
-        self.game.undo()
+    def unstep(self):
+        success = self.game.undo()
+        if not success:
+            raise RuntimeError("Failed to undo")
     
     def get_state_vector(self, game: Game = None):
         if not game:
             game = self.game
         curr_player = game.current_player
         state_vector = []
-        state_vector.append(curr_player.victory_points)
-        state_vector.append(game.turn)
-        state_vector.append(self.calculate_exploration_score(curr_player.id))
+        state_vector.append(curr_player.total_victory_points / game.POINTS_TO_WIN)
+        state_vector.append(curr_player.victory_points / game.POINTS_TO_WIN)
+        state_vector.append(game.turn / 500)
+        state_vector.append(self.calculate_exploration_score(curr_player.id) / 58)
         state_vector.append(curr_player.longest_road)
-        state_vector.append(curr_player.settlements)
-        state_vector.append(curr_player.cities)
-        state_vector.append(curr_player.pp_score)
+        state_vector.append(curr_player.roads / 15)
+        state_vector.append(curr_player.settlements / 5)
+        state_vector.append(curr_player.cities / 4)
+        state_vector.append(curr_player.production_points / 58)
         state_vector.append(curr_player.diversity_score)
-        state_vector.append(len(curr_player.dev_cards))
+        state_vector.append(len(curr_player.dev_cards) / 25)
         state_vector.append(curr_player.largest_army)
         state_vector.append(curr_player.can_buy_city())
         state_vector.append(curr_player.can_buy_settlement())
         state_vector.append(curr_player.can_buy_road())
         state_vector.append(curr_player.can_buy_dev_card())
-        state_vector.append(self.robber_score(curr_player.id))
-
+        state_vector.append(self.robber_score(curr_player.id) / 500)
         return state_vector
     
     def robber_score(self, player_id):
@@ -172,9 +175,9 @@ class CatanEnv(gym.Env):
         l = len(players) if len(players) > 0 else 1
         score = 0
         if not self.game.board.is_player_on_tile(robber, player_id):
-            score += prod * (n_settlements + (n_cities*2)) * (vps/l)
+            score = prod * (n_settlements + (n_cities*2)) * (vps/l)
         else:
-            score -= 100
+            score = -100
 
         return score
 

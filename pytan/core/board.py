@@ -234,7 +234,7 @@ class Board(hexmesh.HexMesh):
             for coord, edge in edges.items():
                 if edge is None:
                     legal_road_placements.append(coord)
-        return legal_road_placements
+        return list(set(legal_road_placements))
 
     def legal_starting_settlement_placements(self, player_id: int) -> list[int]:
         legal_settlement_placements = []

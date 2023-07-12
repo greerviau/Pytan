@@ -37,7 +37,7 @@ class CatanGameState(object):
     def can_build_road(self, log=False) -> bool:
         if self.game_has_started():
             if self._state in [GameStates.INGAME, GameStates.ROADBUILDER]:
-                if not self.can_roll():
+                if self._state == GameStates.ROADBUILDER or not self.can_roll():
                     if self._game.current_player.can_buy_road() or self._game.free_roads > 0:
                         if self._game.current_player.roads_left > 0:
                             if self._game.legal_road_placements():

@@ -2,9 +2,10 @@ import click
 import tkinter as tk
 import time
 import os
+import torch
 
 from pytan.ai.env import CatanEnv
-from pytan.ai.agents import Human, RandomAgent, GreedyAgent
+from pytan.ai.agents import Human, RandomAgent, GreedyAgent, DNNAgent, EvolutionAgent
 from pytan.core.game import Game
 from pytan.core.player import Player
 from pytan.ui.guis import BoardAndPlayerLabel, ControlsAndLog, ReplayGUI
@@ -14,7 +15,9 @@ from pytan.log.logging import Logger
 
 bot_types = {
     'random': RandomAgent,
-    'greedy': GreedyAgent
+    'greedy': GreedyAgent,
+    'dnn': DNNAgent,
+    'ne': EvolutionAgent
 }
 
 colors = ['red', 'white', 'blue', 'orange']
@@ -41,7 +44,12 @@ def setup_catan_env(human_player, bot, log):
         agents.append(Human(Player(h, i, colors[i])))
         i += 1
     for b in bot:
-        agents.append(bot_types[b](Player(b, i, colors[i])))
+        agent = bot_types[b](Player(b, i, colors[i]))
+        if isinstance(agent, DNNAgent):
+            agent.policy.load_state_dict(torch.load('./ppo_models/model_itter_15.ckpt'))
+        elif isinstance(agent, EvolutionAgent):
+            agent.load_model('./organism_gen_19.npy')
+        agents.append(agent)
         i += 1
 
     env = CatanEnv(agents=agents, logger=Logger(log_file=(log if log else None), console_log=False))
@@ -76,28 +84,29 @@ def simulate_game(env):
     game = env.game
     game.start_game(randomize=True)
     while True:
-        if game.state == GameStates.GAME_OVER:
+        if game.is_over:
             break
         action = env.current_player.choose_action(env)
         env.step(action)
 
 def simulate_n_games(env, n_games):
     game = env.game
-    start = time.time()
     turns = []
     wins = [0 for i in range(game.n_players)]
+    times = []
     for i in range(n_games):
         start = time.time()
         simulate_game(env)
         ttp = time.time() - start
+        times.append(ttp)
         turns.append(game.turn)
         vp = [player.total_victory_points for player in game.players]
         winner = vp.index(max(vp))
         wins[winner] += 1
-        print(f'\rGame: {i+1} - {vp} - turns: {game.turn} - time: {ttp:.2f}   ',end='')
+        print(f'\rGame: {i+1}/{n_games} - score: {vp} - wins: {wins} - turns: {game.turn} - time: {ttp:.2f}   ',end='')
     avg_t = sum(turns)//len(turns)
 
-    lapse = round(time.time() - start, 2)
+    lapse = round(sum(times), 2)
     print(f'\n\nWins: {wins}')
     print(f'avg turns: {avg_t}')
     print(f'took {lapse} seconds')

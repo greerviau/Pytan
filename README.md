@@ -1,6 +1,8 @@
 # Pytan
 A Python implementation of Settlers of Catan
 
+![Catan](https://github.com/greerviau/Pytan/assets/36581610/ac279107-1b3f-48ea-9412-83429cc18857)
+
 ## Installation
 ```
 pip install git+https://github.com/greerviau/Pytan.git

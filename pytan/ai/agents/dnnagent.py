@@ -6,7 +6,7 @@ from torch.nn import functional as F
 import numpy as np
 from pytan.core.game import Game
 from pytan.core.player import Player
-from .greedyagent import BotAgent
+from . import BotAgent
 
 class Policy(nn.Module):
     def __init__(self):
@@ -20,14 +20,15 @@ class Policy(nn.Module):
             nn.ReLU(),
             nn.Linear(32, 16),
             nn.ReLU(),
-            nn.Linear(16, 1)
+            nn.Linear(16, 1),
+            nn.Sigmoid()
         )
 
     def state_to_tensor(self, I):
         return torch.from_numpy(I.astype(np.float32).ravel()).unsqueeze(0)
     
-    def pre_process(self, x, prev_x):
-        return self.state_to_tensor(np.array(x)) - self.state_to_tensor(np.array(prev_x))
+    def pre_process(self, x):
+        return self.state_to_tensor(np.array(x))
 
     def forward(self, d_obs, value=None, advantage=None, deterministic=False):
         if value is None:
@@ -37,12 +38,11 @@ class Policy(nn.Module):
                 return value
     
         # PPO
-        ts = torch.FloatTensor(value.cpu().numpy())
 
         logits = self.model(d_obs)
-        r = torch.sum(F.softmax(logits, dim=1) * ts, dim=1) / value
+        r = torch.exp(logits - value)
         loss1 = r * advantage
-        loss2 = torch.clamp(value, 1-self.eps_clip, 1+self.eps_clip) * advantage
+        loss2 = torch.clamp(r, 1-self.eps_clip, 1+self.eps_clip) * advantage
         loss = -torch.min(loss1, loss2)
         loss = torch.mean(loss)
 
@@ -77,12 +77,8 @@ class DNNAgent(BotAgent):
         return action
 
     def score_state(self, state):
-
-        score = self.forward_pass(state)
-
-        return score
-    
-    def forward_pass(self, vector: list):
-        return 0
+        d_obs = self.policy.pre_process(state)
+        value = self.policy(d_obs)
+        return value[0]
     
     

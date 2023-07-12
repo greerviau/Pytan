@@ -28,3 +28,4 @@ class BotAgent(Agent):
 from .randomagent import RandomAgent
 from .greedyagent import GreedyAgent
 from .dnnagent import DNNAgent
+from .evolutionagent import EvolutionAgent
