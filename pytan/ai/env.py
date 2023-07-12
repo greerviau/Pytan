@@ -144,23 +144,23 @@ class CatanEnv(gym.Env):
             game = self.game
         curr_player = game.current_player
         state_vector = []
-        state_vector.append(curr_player.total_victory_points / game.POINTS_TO_WIN)
-        state_vector.append(curr_player.victory_points / game.POINTS_TO_WIN)
-        state_vector.append(game.turn / 500)
-        state_vector.append(self.calculate_exploration_score(curr_player.id) / 58)
+        state_vector.append(curr_player.total_victory_points)
+        state_vector.append(curr_player.victory_points)
+        state_vector.append(game.turn)
+        state_vector.append(self.calculate_exploration_score(curr_player.id))
         state_vector.append(curr_player.longest_road)
-        state_vector.append(curr_player.roads / 15)
-        state_vector.append(curr_player.settlements / 5)
-        state_vector.append(curr_player.cities / 4)
-        state_vector.append(curr_player.production_points / 58)
+        state_vector.append(curr_player.roads)
+        state_vector.append(curr_player.settlements)
+        state_vector.append(curr_player.cities)
+        state_vector.append(curr_player.production_points)
         state_vector.append(curr_player.diversity_score)
-        state_vector.append(len(curr_player.dev_cards) / 25)
+        state_vector.append(len(curr_player.dev_cards))
         state_vector.append(curr_player.largest_army)
         state_vector.append(curr_player.can_buy_city())
         state_vector.append(curr_player.can_buy_settlement())
         state_vector.append(curr_player.can_buy_road())
         state_vector.append(curr_player.can_buy_dev_card())
-        state_vector.append(self.robber_score(curr_player.id) / 500)
+        state_vector.append(self.robber_score(curr_player.id))
         return state_vector
     
     def robber_score(self, player_id):

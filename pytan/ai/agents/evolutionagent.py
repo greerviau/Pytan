@@ -18,7 +18,7 @@ class EvolutionAgent(BotAgent):
         for i in range(len(dimensions)-1):
             shape = (dimensions[i+1], dimensions[i])
             std = np.sqrt(2 / sum(shape))
-            layer = np.random.normal(0, std, shape)
+            layer = np.random.normal(0, std, shape).astype(float)
             self.layers.append(layer)
 
     def choose_action(self, env: 'CatanEnv'):
@@ -45,7 +45,7 @@ class EvolutionAgent(BotAgent):
         return action
 
     def score(self, X):
-        X = np.array(X)
+        X = np.array(X).astype(float)
         #print(X)
         y = self.predict(X)
         return y[0]
@@ -95,9 +95,9 @@ class EvolutionAgent(BotAgent):
                     if r < mr:
                         self.layers[l][i][j] += np.random.normal() / 5
                     if self.layers[l][i][j] > 1:
-                        self.layers[l][i][j] = 1
+                        self.layers[l][i][j] = 1.
                     if self.layers[l][i][j] < -1:
-                        self.layers[l][i][j] = -1
+                        self.layers[l][i][j] = -1.
 
     def crossover(self, partner):
         if not len(self.layers) == len(partner.layers):
@@ -105,14 +105,14 @@ class EvolutionAgent(BotAgent):
         if not all(self.layers[x].shape == partner.layers[x].shape for x in range(len(self.layers))):
             raise ValueError('Both parents must have same shape')
 
-        child = self.clone()
+        child = EvolutionAgent(Player('Player', uuid.uuid1().int, "red"), self.dimensions, self.use_bias)
         for l, layer in enumerate(child.layers):
             randC = math.floor(random.random()*layer.shape[0])
             randR = math.floor(random.random()*layer.shape[1])
             for i in range(layer.shape[0]):
                 for j in range(layer.shape[1]):
                     if i > randR or (i == randR and j <= randC):
-                        continue
+                        child.layers[l][i][j] = self.layers[l][i][j]
                     else:
                         child.layers[l][i][j] = partner.layers[l][i][j]
         return child

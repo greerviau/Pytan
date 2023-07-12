@@ -30,7 +30,7 @@ class Ecosystem():
         self.rewards = []
 
     def find_best(self):
-        return self.population[np.argsort(self.rewards)[-1]].clone()
+        return self.population[0].clone()
 
     def select_parent(self):
         rand = random.random() * self.reward_sum
@@ -38,20 +38,27 @@ class Ecosystem():
         for i, r in enumerate(self.rewards):
             sum += r
             if sum > rand:
+                #print(self.rewards[i])
                 return self.population[i]
         return self.population[0]
 
     def generation(self, keep_best=True):
         self.rewards = []
+        order = []
         n = self.population_size // 4
         for i in range(n):
             print(f"\rBatch: {i+1}/{n}", end='')
-            self.rewards.extend(self.scoring_function(self.population[i*4:(i+1)*4]))
+            rewards, porder = self.scoring_function(self.population[i*4:(i+1)*4])
+            self.rewards.extend(rewards)
+            order.extend(porder)
+        assert order == [p.player.id for p in self.population]
         self.reward_sum = sum(self.rewards)
         avg_reward = np.mean(self.rewards)
         min_reward = np.min(self.rewards)
         max_reward = np.max(self.rewards)
         print(f"\nreward sum: {self.reward_sum:.2f} avg reward: {avg_reward:.2f} min reward: {min_reward:.2f} max reward: {max_reward:.2f}")
+        self.population = [self.population[i] for i in np.argsort(self.rewards)[::-1]]
+        self.rewards = [self.rewards[i] for i in np.argsort(self.rewards)[::-1]]
         new_population = []
         for i in range(self.population_size-1):
             child = self.select_parent().crossover(self.select_parent())
@@ -59,6 +66,7 @@ class Ecosystem():
             new_population.append(child)
         if keep_best:
             best = self.find_best()
+            #print(self.rewards[0])
             new_population.append(best) # Ensure best organism survives
         assert len(new_population) == self.population_size
         self.population = new_population
@@ -85,7 +93,7 @@ def main():
                 env.step(action)
         #print(scores)
         #print(turns)
-        return list(np.sum(np.divide(scores, np.array(turns)[:, None]), axis=0))
+        return list(np.sum(np.divide(scores, np.array(turns)[:, None]), axis=0)), [agent.player.id for agent in agents]
 
     # Create the scoring function and build the ecosystem
     scoring_function = lambda agents : simulate_and_evaluate(agents)
