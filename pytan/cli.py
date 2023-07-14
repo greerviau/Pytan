@@ -48,7 +48,7 @@ def setup_catan_env(human_player, bot, log):
         if isinstance(agent, DNNAgent):
             agent.policy.load_state_dict(torch.load('./ppo_models/model_itter_15.ckpt'))
         elif isinstance(agent, EvolutionAgent):
-            agent.load_model('./organism_gen_19.npy')
+            agent.load_model('./organism_gen_4.npy')
         agents.append(agent)
         i += 1
 

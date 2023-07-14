@@ -9,7 +9,7 @@ from pytan.log.logging import Logger
 from pytan.ai.env import CatanEnv
 
 class Ecosystem():
-    def __init__(self, original_f, scoring_function, population_size=100, holdout='sqrt', mating=True):
+    def __init__(self, original_f, scoring_function, population_size=100):
         """
         original_f must be a function to produce Organisms, used for the original population
         scoring_function must be a function which accepts an Organism as input and returns a float
@@ -17,14 +17,6 @@ class Ecosystem():
         self.population_size = population_size
         self.population = [original_f() for _ in range(population_size)]
         self.scoring_function = scoring_function
-        if holdout == 'sqrt':
-            self.holdout = max(1, int(np.sqrt(population_size)))
-        elif holdout == 'log':
-            self.holdout = max(1, int(np.log(population_size)))
-        elif holdout > 0 and holdout < 1:
-            self.holdout = max(1, int(holdout * population_size))
-        else:
-            self.holdout = max(1, int(holdout))
         self.mating = True
         self.reward_sum = 0
         self.rewards = []
@@ -60,21 +52,21 @@ class Ecosystem():
         self.population = [self.population[i] for i in np.argsort(self.rewards)[::-1]]
         self.rewards = [self.rewards[i] for i in np.argsort(self.rewards)[::-1]]
         new_population = []
-        for i in range(self.population_size-1):
+        for i in range(self.population_size):
             child = self.select_parent().crossover(self.select_parent())
             child.mutate()
-            new_population.append(child)
+            new_population.append(child.clone())
         if keep_best:
             best = self.find_best()
             #print(self.rewards[0])
-            new_population.append(best) # Ensure best organism survives
+            new_population[0] = best # Ensure best organism survives
         assert len(new_population) == self.population_size
         self.population = new_population
 
 def main():
 
     # The function to create the initial population
-    organism_creator = lambda : EvolutionAgent(Player('Player', uuid.uuid1().int, 'red'), [17, 16, 1], output='linear')
+    organism_creator = lambda : EvolutionAgent(Player('Player', uuid.uuid1().int, 'red'), [17, 8, 1], output='linear')
 
     def simulate_and_evaluate(agents):
         env = CatanEnv(agents=agents, logger=Logger(log_file=None, console_log=False))
@@ -97,7 +89,7 @@ def main():
 
     # Create the scoring function and build the ecosystem
     scoring_function = lambda agents : simulate_and_evaluate(agents)
-    ecosystem = Ecosystem(organism_creator, scoring_function, population_size=100, holdout=0.1, mating=True)
+    ecosystem = Ecosystem(organism_creator, scoring_function, population_size=200)
                         
     # Run 20 generations
     generations = 20
